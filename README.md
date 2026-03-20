@@ -1,28 +1,28 @@
 # DraftClaw: Catch the Flaws Before the Reviewers Do.
 
-DraftClaw 是一个面向论文与研究文档的预审工具。在你把稿件交给 reviewer、导师或合作者之前，先把真正容易被指出的问题抓出来。
+DraftClaw is a pre-review tool for academic papers and research documents. Before you submit your draft to reviewers, advisors, or collaborators, it helps surface the issues most likely to be called out.
 
-传统文档工具只能帮你“看见文字”，DraftClaw 更关心“看见问题”。 它会先解析文档，再给出结构化审查结果，帮助你更快定位硬伤、减少来回返工，也让内部预审更有抓手。
+Traditional document tools help you “see text.” DraftClaw focuses on helping you “see problems.” It parses your document and produces structured review results, enabling faster identification of critical flaws, reducing back-and-forth revisions, and making internal reviews more effective.
 
-## 使用场景
-- **论文投稿前自检**：在正式提交至期刊或会议前，提前发现结构、论证与表达中的潜在问题
-- **基金项目提交前自检**：在申报材料提交前，检查逻辑完整性与表达严谨性，降低被初筛淘汰的风险
-- **毕业论文提交前自检**：在最终定稿前进行全面排查，减少导师或评审指出的关键性问题
-- **其他正式研究文档的预审场景**：适用于各类需要对外提交或内部评审的学术与技术文档
+## ✨ Use Cases
+- **Pre-submission paper check**: Identify potential issues in structure, argumentation, and writing before submitting to journals or conferences  
+- **Grant application self-review**: Verify logical completeness and clarity before submission, reducing the risk of early-stage rejection  
+- **Thesis pre-submission check**: Conduct a comprehensive review before finalizing, minimizing major issues flagged by advisors or reviewers  
+- **Other formal research document reviews**: Applicable to academic and technical documents requiring external submission or internal evaluation  
 
-## 例子
+## 🔍 Example
 
-[Demo](./mode_result.html)
+[Result Preview](./mode_result.html)
 
-[Demo](./image.png)
+<img src="./image.png" width="800" alt="DraftClaw Preview">
 
-## 如何使用
+## 🚀 How to Use
 
-### 方式一：本地部署后使用 CLI
+### Option 1: Local Deployment with CLI
 
-适合本地统一部署、批量跑文档、希望所有默认参数都集中在一个配置文件里的场景。
+Best for centralized local deployment, batch processing, and managing all default parameters in a single configuration file.
 
-#### 1. 安装
+#### 📦 1. Installation
 
 ```bash
 git clone <your-repo-url>
@@ -30,67 +30,70 @@ cd DraftClaw
 python -m venv .venv
 .venv\Scripts\activate
 pip install -e draftclaw
-```
+````
 
-安装完成后会注册 `draftclaw` 命令。
+After installation, the `draftclaw` command will be available.
 
-#### 2. 配置
+#### ⚙️ 2. Configuration
 
-CLI 模式下，默认配置统一写在 [default.yaml](./src/draftclaw/resources/configs/default.yaml) 中，也可以在脚本文件[document_parser.py](./document_parser.py)中配置。
+In CLI mode, default settings are defined in [default.yaml](./src/draftclaw/resources/configs/default.yaml). You can also configure them in the script [document_parser.py](./document_parser.py).
 
-#### 3. 运行
+#### ⚡ 3. Run
 
-可以通过**脚本**（推荐）或者**命令行**来进行。
+You can run via **script** (recommended) or **CLI**.
 
-##### 3.1 运行-脚本
+##### 3.1 Run via Script
 
-参考[document_parser.py](./document_parser.py)，完成**1. 安装**和**2. 配置**后，直接一键运行：
+Refer to [document_parser.py](./document_parser.py). After completing **Installation** and **Configuration**, run:
+
 ```bash
 python document_parser.py
 ```
 
-##### 3.2 运行-命令行
+##### 3.2 Run via CLI
 
-直接使用 `default.yaml` 中的配置：
+Use the configuration in `default.yaml`:
 
 ```bash
 draftclaw review
 ```
 
-临时覆盖个别参数：
+Override specific parameters temporarily:
 
 ```bash
 draftclaw --working-dir output review --input ./test_pdf/whu.pdf --mode standard --run-name demo_review
 ```
 
-辅助命令：
+Auxiliary commands:
 
 ```bash
 draftclaw capabilities
 draftclaw validate --result output\runs\20260320\run_xxx\final\mode_result.json
 ```
 
-结果会输出到 `io.working_dir/runs/.../final/` 下，包括：
+Results will be saved under `io.working_dir/runs/.../final/`, including:
 
-- `mode_result.json`
-- `mode_result.md`
-- `mode_result.html`
+* `mode_result.json`
+* `mode_result.md`
+* `mode_result.html`
 
-### 方式二：pip 安装后用脚本调用（暂未上传pip，敬请期待）
+---
 
-适合你直接给用户一个脚本模板，用户只改脚本顶部配置区就能运行。
+### Option 2: Install via pip and Use in Script (Coming Soon)
 
-#### 1. 安装
+Best for providing users with a script template where only the configuration section needs to be modified.
+
+#### 📦 1. Installation
 
 ```bash
 pip install draftclaw
 ```
 
-#### 2. 配置脚本
+#### ⚙️ 2. Configure Script
 
-推荐直接参考仓库根目录的 [document_parser.py](../document_parser.py)。
+Refer to [document_parser.py](../document_parser.py) in the project root.
 
-最小调用方式如下：
+Minimal example:
 
 ```python
 from pathlib import Path
@@ -120,7 +123,7 @@ if outcome.review is not None:
     print(DraftClaw.dump_result(outcome.review.result))
 ```
 
-如果你只想解析文档，不做审查：
+If you only want to parse the document without running a review:
 
 ```python
 from draftclaw import parse_document, parse_document_text
@@ -129,25 +132,55 @@ document = parse_document("paper.pdf")
 text = parse_document_text("paper.pdf")
 ```
 
-## 支持的功能
+## 🧩 Features
 
-📄 **文档处理能力**
-- **多格式输入**：支持 pdf、docx、txt、md、html/htm、pptx、adoc/asciidoc
-- **统一解析**：将不同来源文档转换为结构化文本，便于后续分析
-- **长度适配**：支持硕博论文等长文档处理
-- **安全可靠**：支持本地部署，保障数据隐私
+📄 **Document Processing**
 
-🔍 **审查与输出能力**
-- **结构化结果**：输出 errorlist、error_groups、final_summary 等关键结果
-- **多种导出格式**：支持 JSON、Markdown、HTML（推荐使用 HTML 查看完整结果）
-- **双模式运行**：
-  - fast：整篇快速扫描，适合批量筛查
-  - standard：分段逐轮检查并合并问题，适合正式预审
+* **Multi-format input**: Supports pdf, docx, txt, md, html/htm, pptx, adoc/asciidoc
+* **Unified parsing**: Converts documents into structured text for analysis
+* **Long document support**: Handles lengthy documents such as theses
+* **Secure and reliable**: Supports local deployment for data privacy
 
-⚙️ **使用方式**
-- **CLI + Python API**：既支持命令行直接使用，也可集成到自动化流程中
+📤 **Review & Output**
 
-## 开发与测试
+* **Structured results**: Outputs key results such as errorlist, error_groups, and final_summary
+* **Multiple export formats**: Supports JSON, Markdown, and HTML (HTML recommended for full results)
+* **Dual modes**:
+
+  * fast: full-document quick scan, suitable for batch screening
+  * standard: segmented, iterative review with merged results, suitable for formal pre-review
+
+⚙️ **Usage Options**
+
+* **CLI + Python API**: Can be used directly via command line or integrated into automated workflows
+
+## 📁 Project Structure
+
+```text
+├─ draftclaw/                         # Main project directory
+├─ src/draftclaw/                    # Core Python package source
+│  ├─ cli.py                         # CLI entry point
+│  ├─ api.py                         # Public high-level API
+│  ├─ app.py                         # Application assembly (parser / mode / llm)
+│  ├─ parser.py                      # Document parsing interface
+│  ├─ settings.py                    # Configuration handling
+│  ├─ _core/                         # Core configs, enums, exceptions, data structures
+│  ├─ _runtime/                      # Runtime services and chunking
+│  ├─ _modes/                        # fast / standard review modes
+│  ├─ _llm/                          # LLM calls, caching, clients
+│  ├─ _io/                           # File reading and parsing
+│  ├─ _prompts/                      # Prompt construction
+│  ├─ _postprocess/                  # Result deduplication and merging
+│  ├─ _history/                      # Run artifacts and trace logging
+│  └─ resources/                     # Default configs and prompt templates
+├─ tests/                            # Test code
+├─ document_parser.py                # Example entry (pip/script mode)
+├─ README.md                         # Project documentation
+├─ pyproject.toml                    # Package config, dependencies, CLI registration
+└─ mode_result.html                  # Example result HTML
+```
+
+## 🤝 Development & Testing
 
 ```bash
 pytest
