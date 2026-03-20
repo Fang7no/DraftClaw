@@ -25,7 +25,7 @@ Best for centralized local deployment, batch processing, and managing all defaul
 #### 📦 1. Installation
 
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/Fang7no/DraftClaw.git
 cd DraftClaw
 python -m venv .venv
 .venv\Scripts\activate
