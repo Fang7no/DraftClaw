@@ -1,0 +1,10 @@
+.venv/
+.cache/
+.pytest_cache/
+.test_artifacts/
+ptemp/
+pytest-cache-files-*/
+__pycache__/
+*.pyc
+runs/*
+!runs/.gitkeep

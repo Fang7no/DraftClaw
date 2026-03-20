@@ -1,0 +1,44 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "draftclaw"
+version = "0.2.0"
+description = "Academic document parsing and structured review with simple Python and CLI APIs"
+readme = "README.md"
+requires-python = ">=3.11"
+authors = [{ name = "DraftClaw" }]
+dependencies = [
+  "pydantic>=2.8,<3",
+  "PyYAML>=6.0,<7",
+  "httpx>=0.27,<1",
+  "Jinja2>=3.1,<4",
+  "docling>=1.0,<3"
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.2,<9",
+  "pytest-asyncio>=0.23,<1"
+]
+
+[project.scripts]
+draftclaw = "draftclaw.cli:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+draftclaw = [
+  "resources/configs/*.yaml",
+  "resources/prompts/modes/*.md",
+  "resources/prompts/system/*.md",
+]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]

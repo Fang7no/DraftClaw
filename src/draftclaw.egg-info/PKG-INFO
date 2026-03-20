@@ -1,0 +1,111 @@
+Metadata-Version: 2.4
+Name: draftclaw
+Version: 0.2.0
+Summary: Academic document parsing and structured review with simple Python and CLI APIs
+Author: DraftClaw
+Requires-Python: >=3.11
+Description-Content-Type: text/markdown
+Requires-Dist: pydantic<3,>=2.8
+Requires-Dist: PyYAML<7,>=6.0
+Requires-Dist: httpx<1,>=0.27
+Requires-Dist: Jinja2<4,>=3.1
+Requires-Dist: docling<3,>=1.0
+Provides-Extra: dev
+Requires-Dist: pytest<9,>=8.2; extra == "dev"
+Requires-Dist: pytest-asyncio<1,>=0.23; extra == "dev"
+
+# DraftClaw: Catch the flaws before the reviewers do.
+
+DraftClaw 是一个面向论文与研究文档的预审工具。在你把稿件交给 reviewer、导师或合作者之前，先把真正容易被指出的问题先抓出来。
+
+它先解析文档，再输出结构化审查结果，帮助你更快定位硬伤、减少返工，也让组内预审更有抓手。
+
+## 典型使用场景
+
+- 投稿前自检，先扫语言、数字、上下文一致性和论证漏洞
+- 返修后复查，确认没有引入新的冲突和遗漏
+- 导师、PI、研究助理做组内预审，先聚焦最值得人工讨论的问题
+- 统一解析 PDF、Word、Markdown 等研究文档，作为后续流程入口
+
+## 如何使用
+
+### 方式一：本地部署后使用 CLI
+
+```bash
+git clone <your-repo-url>
+cd DraftClaw
+python -m venv .venv
+.venv\Scripts\activate
+pip install -e draftclaw
+```
+
+CLI 模式下，默认配置统一写在 `src/draftclaw/resources/configs/default.yaml` 中。
+
+直接使用默认配置运行：
+
+```bash
+draftclaw review
+```
+
+临时覆盖参数：
+
+```bash
+draftclaw --working-dir output review --input ./test_pdf/whu.pdf --mode standard --run-name demo_review
+draftclaw --api-key your_api_key --base-url https://api.openai.com/v1 --model gpt-4o-mini review
+```
+
+### 方式二：pip 安装后用脚本调用
+
+```bash
+pip install draftclaw
+```
+
+推荐参考仓库根目录的 `document_parser.py`，直接修改脚本顶部配置区。
+
+最小调用方式：
+
+```python
+from pathlib import Path
+
+from draftclaw import DraftClaw, ModeName, run_document
+
+INPUT_FILE = Path("paper.pdf")
+RUN_REVIEW = True
+RUN_MODE = ModeName.STANDARD
+RUN_NAME = "demo_review"
+
+API_KEY = "your_api_key"
+BASE_URL = "https://api.openai.com/v1"
+MODEL = "gpt-4o-mini"
+
+outcome = run_document(
+    INPUT_FILE,
+    review=RUN_REVIEW,
+    mode=RUN_MODE,
+    run_name=RUN_NAME,
+    api_key=API_KEY,
+    base_url=BASE_URL,
+    model=MODEL,
+)
+
+if outcome.review is not None:
+    print(DraftClaw.dump_result(outcome.review.result))
+```
+
+如果只想解析文档，不做审查：
+
+```python
+from draftclaw import parse_document, parse_document_text
+
+document = parse_document("paper.pdf")
+text = parse_document_text("paper.pdf")
+```
+
+## 支持的功能
+
+- 多格式输入：支持 `pdf`、`docx`、`txt`、`md`、`html` / `htm`、`pptx`、`adoc` / `asciidoc`
+- 文档解析：把不同来源文档转成统一结构化文本
+- 结构化审查：输出 `errorlist`、`error_groups`、`final_summary`
+- 双模式运行：`fast` 适合快速扫一版，`standard` 适合正式预审
+- 多种结果输出：JSON、Markdown、HTML
+- CLI + Python API：既能命令行跑，也能嵌入你自己的流程
