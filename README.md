@@ -29,7 +29,7 @@ git clone https://github.com/Fang7no/DraftClaw.git
 cd DraftClaw
 python -m venv .venv
 .venv\Scripts\activate
-pip install -e draftclaw
+pip install -e .
 ````
 
 After installation, the `draftclaw` command will be available.
