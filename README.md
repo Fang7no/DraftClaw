@@ -1,15 +1,20 @@
-# DraftClaw: Catch the flaws before the reviewers do.
+# DraftClaw: Catch the Flaws Before the Reviewers Do.
 
-DraftClaw 是一个面向论文与研究文档的预审工具。在你把稿件交给 reviewer、导师或合作者之前，先把真正容易被指出的问题先抓出来。
+DraftClaw 是一个面向论文与研究文档的预审工具。在你把稿件交给 reviewer、导师或合作者之前，先把真正容易被指出的问题抓出来。
 
-它先解析文档，再输出结构化审查结果，帮助你更快定位硬伤、减少返工，也让组内预审更有抓手。
+传统文档工具只能帮你“看见文字”，DraftClaw 更关心“看见问题”。 它会先解析文档，再给出结构化审查结果，帮助你更快定位硬伤、减少来回返工，也让内部预审更有抓手。
 
-## 典型使用场景
+## 使用场景
+- **论文投稿前自检**：在正式提交至期刊或会议前，提前发现结构、论证与表达中的潜在问题
+- **基金项目提交前自检**：在申报材料提交前，检查逻辑完整性与表达严谨性，降低被初筛淘汰的风险
+- **毕业论文提交前自检**：在最终定稿前进行全面排查，减少导师或评审指出的关键性问题
+- **其他正式研究文档的预审场景**：适用于各类需要对外提交或内部评审的学术与技术文档
 
-- 投稿前自检，先扫语言、数字、上下文一致性和论证漏洞
-- 返修后复查，确认没有引入新的冲突和遗漏
-- 导师、PI、研究助理做组内预审，先聚焦最值得人工讨论的问题
-- 统一解析 PDF、Word、Markdown 等研究文档，作为后续流程入口
+## 例子
+
+[Demo](./mode_result.html)
+
+[Demo](./image.png)
 
 ## 如何使用
 
@@ -31,29 +36,20 @@ pip install -e draftclaw
 
 #### 2. 配置
 
-CLI 模式下，默认配置统一写在 [default.yaml](./src/draftclaw/resources/configs/default.yaml) 中。
-
-最常需要修改的是：
-
-- `run.input_file`
-- `llm.api_key`
-- `llm.base_url`
-- `llm.model`
-
-常用但通常不用频繁改的是：
-
-- `run.mode`
-- `run.run_name`
-- `io.working_dir`
-- `standard.target_chunks`
-
-其中：
-
-- `standard.target_chunks: 0` 表示自动分块
-- 自动规则是按 `字符数 / 5000` 取最近奇数，最大不超过 `19`
-- 如果你填 `1` 到 `20`，系统就按你指定的分块数执行
+CLI 模式下，默认配置统一写在 [default.yaml](./src/draftclaw/resources/configs/default.yaml) 中，也可以在脚本文件[document_parser.py](./document_parser.py)中配置。
 
 #### 3. 运行
+
+可以通过**脚本**（推荐）或者**命令行**来进行。
+
+##### 3.1 运行-脚本
+
+参考[document_parser.py](./document_parser.py)，完成**1. 安装**和**2. 配置**后，直接一键运行：
+```bash
+python document_parser.py
+```
+
+##### 3.2 运行-命令行
 
 直接使用 `default.yaml` 中的配置：
 
@@ -65,12 +61,6 @@ draftclaw review
 
 ```bash
 draftclaw --working-dir output review --input ./test_pdf/whu.pdf --mode standard --run-name demo_review
-```
-
-临时覆盖模型参数：
-
-```bash
-draftclaw --api-key your_api_key --base-url https://api.openai.com/v1 --model gpt-4o-mini review
 ```
 
 辅助命令：
@@ -86,7 +76,7 @@ draftclaw validate --result output\runs\20260320\run_xxx\final\mode_result.json
 - `mode_result.md`
 - `mode_result.html`
 
-### 方式二：pip 安装后用脚本调用
+### 方式二：pip 安装后用脚本调用（暂未上传pip，敬请期待）
 
 适合你直接给用户一个脚本模板，用户只改脚本顶部配置区就能运行。
 
@@ -99,14 +89,6 @@ pip install draftclaw
 #### 2. 配置脚本
 
 推荐直接参考仓库根目录的 [document_parser.py](../document_parser.py)。
-
-脚本顶部已经按三类整理好配置：
-
-- 必须修改：`INPUT_FILE`、`API_KEY`
-- 常用可调：`RUN_MODE`、`BASE_URL`、`MODEL`、`WORKING_DIR`
-- 高级参数：`ENABLE_MERGE_AGENT`、`TEXT_FAST_PATH`、`CACHE_IN_PROCESS`、`CACHE_ON_DISK`、`DOCLING_PAGE_CHUNK_SIZE`、`CHUNK_COUNT`、`LLM_TIMEOUT_SEC`
-
-其中默认值已经按常规使用场景设好，通常除了 `INPUT_FILE`、`API_KEY`、`BASE_URL`、`MODEL` 之外都不用改。
 
 最小调用方式如下：
 
@@ -149,19 +131,21 @@ text = parse_document_text("paper.pdf")
 
 ## 支持的功能
 
-- 多格式输入：支持 `pdf`、`docx`、`txt`、`md`、`html` / `htm`、`pptx`、`adoc` / `asciidoc`
-- 文档解析：把不同来源文档转成统一结构化文本
-- 结构化审查：输出 `errorlist`、`error_groups`、`final_summary`
-- 双模式运行：`fast` 适合快速扫一版，`standard` 适合正式预审
-- 多种结果输出：JSON、Markdown、HTML
-- CLI + Python API：既能命令行跑，也能嵌入你自己的流程
+📄 **文档处理能力**
+- **多格式输入**：支持 pdf、docx、txt、md、html/htm、pptx、adoc/asciidoc
+- **统一解析**：将不同来源文档转换为结构化文本，便于后续分析
+- **长度适配**：支持硕博论文等长文档处理
+- **安全可靠**：支持本地部署，保障数据隐私
 
-## 项目特色
+🔍 **审查与输出能力**
+- **结构化结果**：输出 errorlist、error_groups、final_summary 等关键结果
+- **多种导出格式**：支持 JSON、Markdown、HTML（推荐使用 HTML 查看完整结果）
+- **双模式运行**：
+  - fast：整篇快速扫描，适合批量筛查
+  - standard：分段逐轮检查并合并问题，适合正式预审
 
-- 关注预审价值，优先抓真正会被 reviewer 指出来的问题
-- 既能个人自检，也适合团队内审
-- CLI 与脚本两条使用路径明确，不再混用多套配置入口
-- 解析与审查可以拆开使用
+⚙️ **使用方式**
+- **CLI + Python API**：既支持命令行直接使用，也可集成到自动化流程中
 
 ## 开发与测试
 
