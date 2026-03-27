@@ -2,8 +2,15 @@ pydantic<3,>=2.8
 PyYAML<7,>=6.0
 httpx<1,>=0.27
 Jinja2<4,>=3.1
+Flask<4,>=3
 docling<3,>=1.0
+paddleocr<4,>=2.8
+paddlepaddle<4,>=3.3
+pypdf<6,>=5
+pypdfium2<5,>=4
 
 [dev]
 pytest<9,>=8.2
 pytest-asyncio<1,>=0.23
+build<2,>=1.2
+twine<7,>=5

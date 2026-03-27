@@ -15,12 +15,20 @@ from draftclaw._history.trace import TraceLayout, create_run_id
 from draftclaw._io.docling_parser import DoclingDocumentParser
 from draftclaw._llm.cache import LLMCache
 from draftclaw._llm.runner import LLMRunner
+from draftclaw._modes.deep import DeepMode
 from draftclaw._modes.fast import FastMode
 from draftclaw._modes.standard import StandardMode
 from draftclaw._postprocess.finalize import prepare_mode_result
 from draftclaw._prompts.builder import PromptBuilder
 from draftclaw._resources import package_prompts_root
 from draftclaw._runtime.paragraph_chunker import ParagraphChunker
+from draftclaw._runtime.progress import (
+    PROGRESS_STAGE_PARSING,
+    PROGRESS_STAGE_REPORTING,
+    ProgressCallback,
+    emit_progress,
+    parsing_label_for_path,
+)
 
 LOGGER = logging.getLogger(__name__)
 PROMPT_VERSION = "draftclaw-v1"
@@ -34,8 +42,10 @@ class ReviewService:
         working_dir: str | Path | None = None,
         llm_override: dict[str, str] | None = None,
         prompts_root: str | Path | Traversable | None = None,
+        progress_callback: ProgressCallback | None = None,
     ) -> None:
         self.config = config.model_copy(deep=True)
+        self._progress_callback = progress_callback
         configured_working_dir = self.config.io.working_dir.strip() if self.config.io.working_dir else ""
         runtime_working_dir = working_dir or configured_working_dir or Path.cwd()
         self.working_dir = Path(runtime_working_dir).resolve()
@@ -58,6 +68,12 @@ class ReviewService:
             cache_in_process=self.config.parser.cache_in_process,
             cache_on_disk=self.config.parser.cache_on_disk,
             docling_page_chunk_size=self.config.parser.docling_page_chunk_size,
+            pdf_parse_mode=self.config.parser.pdf_parse_mode,
+            paddleocr_api_url=self.config.parser.paddleocr_api_url,
+            paddleocr_api_key=self.config.parser.paddleocr_api_key,
+            paddleocr_api_model=self.config.parser.paddleocr_api_model,
+            paddleocr_poll_interval_sec=self.config.parser.paddleocr_poll_interval_sec,
+            paddleocr_api_timeout_sec=self.config.parser.paddleocr_api_timeout_sec,
             working_dir=self.working_dir,
         )
         self.prompt_builder = PromptBuilder(prompts_root or package_prompts_root())
@@ -73,12 +89,21 @@ class ReviewService:
             self.llm_runner,
             self.chunker,
             enable_merge_agent=self.config.llm.enable_merge_agent,
+            progress_callback=self._progress_callback,
         )
         self.standard_mode = StandardMode(
             chunker=self.chunker,
             prompt_builder=self.prompt_builder,
             llm_runner=self.llm_runner,
             enable_merge_agent=self.config.llm.enable_merge_agent,
+            progress_callback=self._progress_callback,
+        )
+        self.deep_mode = DeepMode(
+            chunker=self.chunker,
+            prompt_builder=self.prompt_builder,
+            llm_runner=self.llm_runner,
+            enable_merge_agent=self.config.llm.enable_merge_agent,
+            progress_callback=self._progress_callback,
         )
 
     async def review(
@@ -99,7 +124,14 @@ class ReviewService:
         run_log_path = run_paths.logs / self.config.logging.log_file
         self._append_run_log(run_log_path, f"Run start | mode={mode.value} | input={input_path}")
 
-        document = document or self.input_parser.parse(input_path)
+        if document is None:
+            emit_progress(
+                self._progress_callback,
+                stage=PROGRESS_STAGE_PARSING,
+                label=parsing_label_for_path(input_path),
+                detail="\u63d0\u53d6\u5168\u6587\u3001\u7ed3\u6784\u4e0e\u5206\u9875\u4fe1\u606f",
+            )
+            document = self.input_parser.parse(input_path)
         history.save_document_manifest(document)
         if self.config.io.copy_input_file:
             history.save_input_file(document.path, Path(document.path).suffix)
@@ -125,8 +157,16 @@ class ReviewService:
                 result = await self.fast_mode.run(document=document, history=history)
             elif mode == ModeName.STANDARD:
                 result = await self.standard_mode.run(document=document, history=history)
+            elif mode == ModeName.DEEP:
+                result = await self.deep_mode.run(document=document, history=history)
             else:  # pragma: no cover
                 raise ValueError(f"Unsupported mode: {mode}")
+        emit_progress(
+            self._progress_callback,
+            stage=PROGRESS_STAGE_REPORTING,
+            label="\u62a5\u544a\u751f\u6210\u4e2d",
+            detail="\u6574\u7406\u6700\u7ec8\u7ed3\u679c\u5e76\u5199\u5165 HTML / Markdown \u62a5\u544a",
+        )
         result = prepare_mode_result(result)
 
         final_json, final_md, final_html = history.save_final_result(

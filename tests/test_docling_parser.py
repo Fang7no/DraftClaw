@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from types import SimpleNamespace
 from uuid import uuid4
 
-from docling.datamodel.base_models import ConversionStatus
+import pytest
 
+from draftclaw._core.exceptions import InputLoadError
 from draftclaw._io.docling_parser import DoclingDocumentParser
 
 
@@ -49,64 +51,110 @@ def test_docling_parser_uses_docling_for_binary_formats(monkeypatch) -> None:
     assert "# Title" in document.text
 
 
-def test_docling_parser_uses_pdfium_fast_path_for_pdf(monkeypatch) -> None:
-    source = _artifact_dir("parser_pdf_fast") / "sample.pdf"
+def test_docling_parser_fast_mode_uses_pypdf_for_pdf(monkeypatch) -> None:
+    source = _artifact_dir("parser_pdf_text_first") / "sample.pdf"
     source.write_bytes(b"%PDF-1.4 fake")
-    parser = DoclingDocumentParser()
+    parser = DoclingDocumentParser(pdf_parse_mode="fast")
+    monkeypatch.setattr(parser, "_get_pdf_page_count", lambda _: 2)
+    monkeypatch.setattr(parser, "_pypdf_available", lambda: True)
     monkeypatch.setattr(
         parser,
-        "_extract_pdf_text_fast",
-        lambda _: ("page one\n\npage two", {"pdf_text_fast_path": True, "pdf_page_count": 2}),
-    )
-    monkeypatch.setattr(
-        parser,
-        "_convert_with_docling",
-        lambda _: (_ for _ in ()).throw(AssertionError("pdf fast path should avoid docling")),
-    )
-
-    document = parser.parse(source)
-
-    assert document.parser_backend == "pdfium-text-fast-path"
-    assert document.text == "page one\n\npage two"
-    assert document.metadata["pdf_text_fast_path"] is True
-    assert document.metadata["pdf_page_count"] == 2
-
-
-def test_docling_parser_falls_back_to_docling_when_pdfium_text_is_insufficient(monkeypatch) -> None:
-    source = _artifact_dir("parser_pdf_docling_fallback") / "sample.pdf"
-    source.write_bytes(b"%PDF-1.4 fake")
-    parser = DoclingDocumentParser()
-    monkeypatch.setattr(
-        parser,
-        "_extract_pdf_text_fast",
-        lambda _: (
-            None,
+        "_parse_pdf_with_pypdf",
+        lambda _path, *, page_count: (
+            "page one\n\npage two",
             {
-                "pdf_text_fast_path": False,
-                "pdf_text_fast_path_reason": "embedded text coverage is too low",
+                "pdf_parser_strategy": "pypdf",
+                "pdf_page_count": page_count,
+                "pdf_nonempty_pages": page_count,
+                "pdf_extracted_chars": 1200,
             },
         ),
     )
+
+    document = parser.parse(source)
+
+    assert document.parser_backend == "pypdf"
+    assert document.text == "page one\n\npage two"
+    assert document.metadata["pdf_page_count"] == 2
+    assert document.metadata["pdf_parse_mode"] == "fast"
+    assert document.metadata["pdf_parser_strategy"] == "pypdf"
+
+
+def test_docling_parser_accurate_mode_uses_paddleocr_api(monkeypatch) -> None:
+    source = _artifact_dir("parser_pdf_sparse_text") / "sample.pdf"
+    source.write_bytes(b"%PDF-1.4 fake")
+    parser = DoclingDocumentParser(
+        pdf_parse_mode="accurate",
+        paddleocr_api_url="https://ocr.example/api/parse",
+        paddleocr_api_key="ocr-key",
+        paddleocr_api_model="PaddleOCR-VL-1.5",
+    )
+    monkeypatch.setattr(parser, "_get_pdf_page_count", lambda _: 2)
     monkeypatch.setattr(
         parser,
-        "_convert_pdf_with_docling",
-        lambda _: (
-            "docling fallback text",
-            {"docling_paged_parse": False, "docling_page_chunk_size": 8},
+        "_parse_pdf_with_paddleocr_api",
+        lambda _path, *, page_count: (
+            "ocr page one\n\nocr page two",
+            {"pdf_parser_strategy": "paddleocr_api"},
         ),
     )
 
     document = parser.parse(source)
 
-    assert document.parser_backend == "docling"
-    assert document.text == "docling fallback text"
-    assert document.metadata["pdf_text_fast_path"] is False
-    assert document.metadata["pdf_text_fast_path_reason"] == "embedded text coverage is too low"
-    assert document.metadata["docling_paged_parse"] is False
+    assert document.parser_backend == "paddleocr-api"
+    assert document.text == "ocr page one\n\nocr page two"
+    assert document.metadata["pdf_page_count"] == 2
+    assert document.metadata["pdf_parse_mode"] == "accurate"
+    assert document.metadata["pdf_parser_strategy"] == "paddleocr_api"
+
+
+def test_docling_parser_fast_mode_requires_pypdf(monkeypatch) -> None:
+    source = _artifact_dir("parser_pdf_fallback") / "sample.pdf"
+    source.write_bytes(b"%PDF-1.4 fake")
+    parser = DoclingDocumentParser(pdf_parse_mode="fast")
+    monkeypatch.setattr(parser, "_get_pdf_page_count", lambda _: 2)
+    monkeypatch.setattr(parser, "_pypdf_available", lambda: False)
+
+    with pytest.raises(InputLoadError, match="fast mode requires `pypdf`"):
+        parser.parse(source)
+
+
+def test_docling_parser_accurate_mode_requires_api_url(monkeypatch) -> None:
+    source = _artifact_dir("parser_pdf_api_url") / "sample.pdf"
+    source.write_bytes(b"%PDF-1.4 fake")
+    parser = DoclingDocumentParser(pdf_parse_mode="accurate")
+    monkeypatch.setattr(parser, "_get_pdf_page_count", lambda _: None)
+
+    with pytest.raises(InputLoadError, match="paddleocr_api_url"):
+        parser.parse(source)
+
+
+def test_docling_parser_fast_mode_uses_pypdf_for_long_pdf(monkeypatch) -> None:
+    source = _artifact_dir("parser_pdf_pypdf") / "sample.pdf"
+    source.write_bytes(b"%PDF-1.4 fake")
+    parser = DoclingDocumentParser(pdf_parse_mode="fast")
+    monkeypatch.setattr(parser, "_get_pdf_page_count", lambda _: 40)
+    monkeypatch.setattr(
+        parser,
+        "_parse_pdf_with_pypdf",
+        lambda _path, *, page_count: (
+            "page one\n\npage forty",
+            {"pdf_parser_strategy": "pypdf", "pdf_page_count": page_count, "pdf_nonempty_pages": page_count - 1},
+        ),
+    )
+
+    document = parser.parse(source)
+
+    assert document.parser_backend == "pypdf"
+    assert document.text == "page one\n\npage forty"
+    assert document.metadata["pdf_page_count"] == 40
+    assert document.metadata["pdf_parser_strategy"] == "pypdf"
+    assert document.metadata["pdf_parse_mode"] == "fast"
 
 
 def test_docling_parser_prepares_project_local_docling_runtime(monkeypatch) -> None:
-    from docling.datamodel.settings import settings
+    settings_module = pytest.importorskip("docling.datamodel.settings")
+    settings = settings_module.settings
 
     calls: list[dict[str, object]] = []
 
@@ -162,83 +210,100 @@ def test_docling_parser_reuses_disk_cache_across_instances(monkeypatch) -> None:
     source.write_bytes(b"%PDF-1.4 fake")
     working_dir = _artifact_dir("parser_pdf_cache_workdir")
 
-    parser_first = DoclingDocumentParser(working_dir=working_dir, cache_in_process=False, cache_on_disk=True)
+    parser_first = DoclingDocumentParser(
+        working_dir=working_dir,
+        cache_in_process=False,
+        cache_on_disk=True,
+        pdf_parse_mode="accurate",
+        paddleocr_api_url="https://ocr.example/api/parse",
+        paddleocr_api_key="ocr-key",
+    )
     parse_calls: list[str] = []
 
-    def fake_convert(path: Path) -> tuple[str, dict[str, object]]:
-        parse_calls.append(path.name)
-        return "first parse result", {"docling_paged_parse": False}
+    def fake_paddleocr_api(path: Path, *, page_count: int | None) -> tuple[str, dict[str, object]]:
+        parse_calls.append(f"{path.name}:{page_count}")
+        return "first parse result", {"pdf_parser_strategy": "paddleocr_api"}
 
-    monkeypatch.setattr(parser_first, "_extract_pdf_text_fast", lambda _: (None, {"pdf_text_fast_path": False}))
-    monkeypatch.setattr(parser_first, "_convert_pdf_with_docling", fake_convert)
+    monkeypatch.setattr(parser_first, "_get_pdf_page_count", lambda _: 2)
+    monkeypatch.setattr(parser_first, "_parse_pdf_with_paddleocr_api", fake_paddleocr_api)
 
     first_document = parser_first.parse(source)
 
-    parser_second = DoclingDocumentParser(working_dir=working_dir, cache_in_process=False, cache_on_disk=True)
+    parser_second = DoclingDocumentParser(
+        working_dir=working_dir,
+        cache_in_process=False,
+        cache_on_disk=True,
+        pdf_parse_mode="accurate",
+        paddleocr_api_url="https://ocr.example/api/parse",
+        paddleocr_api_key="ocr-key",
+    )
     monkeypatch.setattr(
         parser_second,
-        "_convert_pdf_with_docling",
-        lambda _: (_ for _ in ()).throw(AssertionError("disk cache should avoid re-parsing")),
+        "_parse_pdf_with_paddleocr_api",
+        lambda *_args, **_kwargs: (_ for _ in ()).throw(AssertionError("disk cache should avoid re-parsing")),
     )
 
     second_document = parser_second.parse(source)
 
-    assert parse_calls == ["sample.pdf"]
+    assert parse_calls == ["sample.pdf:2"]
     assert first_document.text == "first parse result"
     assert second_document.text == "first parse result"
     assert second_document.sha256 == first_document.sha256
 
 
-def test_docling_parser_chunks_docling_pdf_conversion(monkeypatch) -> None:
-    source = _artifact_dir("parser_pdf_chunked") / "sample.pdf"
-    source.write_bytes(b"%PDF-1.4 fake")
-    parser = DoclingDocumentParser(docling_page_chunk_size=2)
-    calls: list[tuple[int, int] | None] = []
+def test_extract_paddleocr_text_supports_classic_payload() -> None:
+    payload = [
+        [
+            [[[0, 0], [1, 0], [1, 1], [0, 1]], ("first line", 0.99)],
+            [[[0, 2], [1, 2], [1, 3], [0, 3]], ("second line", 0.98)],
+        ]
+    ]
 
-    class FakeDocument:
-        def __init__(self, text: str) -> None:
-            self._text = text
+    text = DoclingDocumentParser._extract_paddleocr_text(payload)
 
-        def export_to_markdown(self) -> str:
-            return self._text
-
-    class FakeConverter:
-        def convert(self, source: str, **kwargs):
-            page_range = kwargs.get("page_range")
-            calls.append(page_range)
-            if page_range == (3, 4):
-                return SimpleNamespace(
-                    document=FakeDocument("chunk 3-4"),
-                    status=ConversionStatus.PARTIAL_SUCCESS,
-                    errors=[SimpleNamespace(error_message="Page 4: std::bad_alloc")],
-                )
-            return SimpleNamespace(
-                document=FakeDocument(f"chunk {page_range[0]}-{page_range[1]}"),
-                status=ConversionStatus.SUCCESS,
-                errors=[],
-            )
-
-    monkeypatch.setattr(parser, "_get_converter", lambda: FakeConverter())
-    monkeypatch.setattr(parser, "_get_pdf_page_count", lambda _: 5)
-
-    text, metadata = parser._convert_pdf_with_docling(source)
-
-    assert text == "chunk 1-2\n\nchunk 3-4\n\nchunk 5-5"
-    assert calls == [(1, 2), (3, 4), (5, 5)]
-    assert metadata["docling_paged_parse"] is True
-    assert metadata["docling_page_chunk_size"] == 2
-    assert metadata["docling_page_ranges"] == [[1, 2], [3, 4], [5, 5]]
-    assert metadata["docling_partial_page_ranges"] == [[3, 4]]
+    assert text == "first line\nsecond line"
 
 
-def test_pdf_fast_path_heuristic_requires_reasonable_coverage() -> None:
-    assert DoclingDocumentParser._should_use_pdf_text_fast_path(
-        total_pages=10,
-        nonempty_pages=7,
-        non_whitespace_chars=700,
+def test_extract_paddleocr_text_supports_structured_payload() -> None:
+    payload = [
+        {
+            "res": {
+                "rec_texts": ["alpha", "beta"],
+            }
+        }
+    ]
+
+    text = DoclingDocumentParser._extract_paddleocr_text(payload)
+
+    assert text == "alpha\nbeta"
+
+
+def test_extract_paddleocr_api_text_supports_jsonl_markdown_payload() -> None:
+    payload = "\n".join(
+        [
+            json.dumps(
+                {
+                    "result": {
+                        "layoutParsingResults": [
+                            {"markdown": {"text": "# Page 1\n\nalpha"}},
+                            {"markdown": {"text": "beta"}},
+                        ]
+                    }
+                }
+            ),
+            json.dumps(
+                {
+                    "result": {
+                        "layoutParsingResults": [
+                            {"markdown": {"text": "# Page 2\n\ngamma"}},
+                        ]
+                    }
+                }
+            ),
+        ]
     )
-    assert not DoclingDocumentParser._should_use_pdf_text_fast_path(
-        total_pages=10,
-        nonempty_pages=2,
-        non_whitespace_chars=400,
-    )
+
+    text, page_count = DoclingDocumentParser._extract_paddleocr_api_text(payload)
+
+    assert text == "# Page 1\n\nalpha\n\nbeta\n\n# Page 2\n\ngamma"
+    assert page_count == 3

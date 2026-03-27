@@ -1,21 +1,11 @@
-# CLI defaults. Edit this file before running `draftclaw review`.
-
 run:
-  # Required for CLI review. Replace with the document you want to inspect.
   input_file: ./test_pdf/whu.pdf
-  # Review mode: `fast` for quicker scans, `standard` for steadier review.
   mode: standard
-  # Optional label used in the generated run folder name.
   run_name: demo_review
-
 llm:
-  # Required. Replace with a real API key before running review.
-  api_key: your_api_key
-  # Change this when using a non-default OpenAI-compatible provider.
-  base_url: https://api.openai.com/v1
-  # Change this to the model you want to use.
-  model: gpt-4o-mini
-  # Usually no need to change.
+  api_key: sk-6db2c0e482a941299ebaf7280b619237
+  base_url: https://dashscope.aliyuncs.com/compatible-mode/v1
+  model: qwen3-vl-32b-thinking
   timeout_sec: 60.0
   temperature: 0.0
   top_p: 1.0
@@ -25,31 +15,27 @@ llm:
   use_json_schema: true
   enable_cache: true
   enable_merge_agent: true
-
 io:
-  # Root output directory for runs, caches, and copied inputs.
   working_dir: output
-  # Run artifacts will be stored under `<working_dir>/<runs_dir>/...`.
   runs_dir: runs
   output_filename_json: mode_result.json
   output_filename_md: mode_result.md
   output_filename_html: mode_result.html
   copy_input_file: true
-
 parser:
-  # Keep this enabled for txt/md inputs unless you need full parser parity.
   text_fast_path: true
   cache_in_process: true
   cache_on_disk: true
-  # Leave this at 8 unless you need different PDF chunking for docling.
   docling_page_chunk_size: 8
-
+  pdf_parse_mode: fast
+  paddleocr_api_url: https://paddleocr.aistudio-app.com/api/v2/ocr/jobs
+  paddleocr_api_key: ""
+  paddleocr_api_model: PaddleOCR-VL-1.5
+  paddleocr_poll_interval_sec: 5.0
+  paddleocr_api_timeout_sec: 120.0
 standard:
-  # `0` means auto: choose the nearest odd number to chars/5000, capped at 19.
-  # Use 1-20 to force a specific chunk count.
   target_chunks: 0
-  paragraph_separator_regex: "\\n\\s*\\n"
-
+  paragraph_separator_regex: \n\s*\n
 logging:
   level: INFO
   log_file: run.log

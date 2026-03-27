@@ -32,6 +32,14 @@ def test_build_config_reads_direct_yaml_fields() -> None:
             "io": {
                 "working_dir": "output",
             },
+            "parser": {
+                "pdf_parse_mode": "accurate",
+                "paddleocr_api_url": "https://ocr.example/api/parse",
+                "paddleocr_api_key": "ocr-key",
+                "paddleocr_api_model": "PaddleOCR-VL-1.5",
+                "paddleocr_poll_interval_sec": 6,
+                "paddleocr_api_timeout_sec": 180,
+            },
             "standard": {
                 "target_chunks": 0,
             },
@@ -46,6 +54,12 @@ def test_build_config_reads_direct_yaml_fields() -> None:
     assert config.llm.model == "demo-model"
     assert config.llm.timeout_sec == 45
     assert config.io.working_dir == "output"
+    assert config.parser.pdf_parse_mode == "accurate"
+    assert config.parser.paddleocr_api_url == "https://ocr.example/api/parse"
+    assert config.parser.paddleocr_api_key == "ocr-key"
+    assert config.parser.paddleocr_api_model == "PaddleOCR-VL-1.5"
+    assert config.parser.paddleocr_poll_interval_sec == 6
+    assert config.parser.paddleocr_api_timeout_sec == 180
     assert config.standard.target_chunks == 0
 
 

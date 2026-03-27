@@ -6,5 +6,10 @@ ptemp/
 pytest-cache-files-*/
 __pycache__/
 *.pyc
+build/
+dist/
+output/
+output_web/
+output_web_check/
 runs/*
 !runs/.gitkeep

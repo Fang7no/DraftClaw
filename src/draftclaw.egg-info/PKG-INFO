@@ -9,90 +9,98 @@ Requires-Dist: pydantic<3,>=2.8
 Requires-Dist: PyYAML<7,>=6.0
 Requires-Dist: httpx<1,>=0.27
 Requires-Dist: Jinja2<4,>=3.1
+Requires-Dist: Flask<4,>=3
 Requires-Dist: docling<3,>=1.0
+Requires-Dist: paddleocr<4,>=2.8
+Requires-Dist: paddlepaddle<4,>=3.3
+Requires-Dist: pypdf<6,>=5
+Requires-Dist: pypdfium2<5,>=4
 Provides-Extra: dev
 Requires-Dist: pytest<9,>=8.2; extra == "dev"
 Requires-Dist: pytest-asyncio<1,>=0.23; extra == "dev"
+Requires-Dist: build<2,>=1.2; extra == "dev"
+Requires-Dist: twine<7,>=5; extra == "dev"
 
-# DraftClaw: Catch the flaws before the reviewers do.
+# DraftClaw
 
-DraftClaw 是一个面向论文与研究文档的预审工具。在你把稿件交给 reviewer、导师或合作者之前，先把真正容易被指出的问题先抓出来。
+DraftClaw is a local-first review tool for research documents. It parses a paper or report, runs structured LLM review workflows, and exports JSON, Markdown, and HTML reports.
 
-它先解析文档，再输出结构化审查结果，帮助你更快定位硬伤、减少返工，也让组内预审更有抓手。
+## Features
 
-## 典型使用场景
+- Multi-format parsing: `pdf`, `docx`, `txt`, `md`, `html`, `pptx`, `adoc`
+- PDF parsing strategy: `paddleocr` for PDFs up to 35 pages, `pypdf` for larger PDFs
+- Review modes:
+  - `fast`: quicker scan
+  - `standard`: chunked context-aware review
+  - `deep`: `standard` output contract with a three-stage main agent (`plan -> execute -> validate`)
+- HTML report generation for direct browsing
+- CLI, Python API, and Flask web platform
+- Persistent local job queue for web usage
 
-- 投稿前自检，先扫语言、数字、上下文一致性和论证漏洞
-- 返修后复查，确认没有引入新的冲突和遗漏
-- 导师、PI、研究助理做组内预审，先聚焦最值得人工讨论的问题
-- 统一解析 PDF、Word、Markdown 等研究文档，作为后续流程入口
+## Installation
 
-## 如何使用
-
-### 方式一：本地部署后使用 CLI
+### Local development
 
 ```bash
-git clone <your-repo-url>
+git clone https://github.com/Fang7no/DraftClaw.git
 cd DraftClaw
 python -m venv .venv
 .venv\Scripts\activate
-pip install -e draftclaw
+pip install -e .
 ```
 
-CLI 模式下，默认配置统一写在 `src/draftclaw/resources/configs/default.yaml` 中。
-
-直接使用默认配置运行：
-
-```bash
-draftclaw review
-```
-
-临时覆盖参数：
-
-```bash
-draftclaw --working-dir output review --input ./test_pdf/whu.pdf --mode standard --run-name demo_review
-draftclaw --api-key your_api_key --base-url https://api.openai.com/v1 --model gpt-4o-mini review
-```
-
-### 方式二：pip 安装后用脚本调用
+### Package usage
 
 ```bash
 pip install draftclaw
 ```
 
-推荐参考仓库根目录的 `document_parser.py`，直接修改脚本顶部配置区。
+## CLI
 
-最小调用方式：
+Default CLI configuration lives in [src/draftclaw/resources/configs/default.yaml](./src/draftclaw/resources/configs/default.yaml).
+
+Run a review:
+
+```bash
+draftclaw review --input ./test_pdf/paper.pdf --mode deep --run-name demo_review
+```
+
+If DraftClaw detects a PDF with the same filename but different content, the CLI asks whether to reparse it. In non-interactive environments, pass `--reparse-pdf` or `--no-reparse-pdf`.
+
+Other commands:
+
+```bash
+draftclaw capabilities
+draftclaw validate --result output\runs\20260320\run_xxx\final\mode_result.json
+```
+
+Outputs are written under `<working_dir>/<runs_dir>/.../final/`:
+
+- `mode_result.json`
+- `mode_result.md`
+- `mode_result.html`
+
+## Python API
 
 ```python
 from pathlib import Path
 
-from draftclaw import DraftClaw, ModeName, run_document
-
-INPUT_FILE = Path("paper.pdf")
-RUN_REVIEW = True
-RUN_MODE = ModeName.STANDARD
-RUN_NAME = "demo_review"
-
-API_KEY = "your_api_key"
-BASE_URL = "https://api.openai.com/v1"
-MODEL = "gpt-4o-mini"
+from draftclaw import ModeName, run_document
 
 outcome = run_document(
-    INPUT_FILE,
-    review=RUN_REVIEW,
-    mode=RUN_MODE,
-    run_name=RUN_NAME,
-    api_key=API_KEY,
-    base_url=BASE_URL,
-    model=MODEL,
+    Path("paper.pdf"),
+    review=True,
+    mode=ModeName.DEEP,
+    run_name="demo_review",
+    api_key="your_api_key",
+    base_url="https://api.openai.com/v1",
+    model="gpt-4o-mini",
 )
 
-if outcome.review is not None:
-    print(DraftClaw.dump_result(outcome.review.result))
+print(outcome.result_html)
 ```
 
-如果只想解析文档，不做审查：
+Parse only:
 
 ```python
 from draftclaw import parse_document, parse_document_text
@@ -101,11 +109,74 @@ document = parse_document("paper.pdf")
 text = parse_document_text("paper.pdf")
 ```
 
-## 支持的功能
+## Web Platform
 
-- 多格式输入：支持 `pdf`、`docx`、`txt`、`md`、`html` / `htm`、`pptx`、`adoc` / `asciidoc`
-- 文档解析：把不同来源文档转成统一结构化文本
-- 结构化审查：输出 `errorlist`、`error_groups`、`final_summary`
-- 双模式运行：`fast` 适合快速扫一版，`standard` 适合正式预审
-- 多种结果输出：JSON、Markdown、HTML
-- CLI + Python API：既能命令行跑，也能嵌入你自己的流程
+Start the local Flask platform:
+
+```bash
+draftclaw-web --host 127.0.0.1 --port 5000 --web-root output_web
+```
+
+The web UI provides:
+
+- A minimal settings panel for `API_KEY`, `RUN_NAME`, `BASE_URL`, and `MODEL`
+- Mode selection and multi-file upload
+- Same-name PDF change detection with a reparse confirmation prompt
+- A persistent submission queue with up to 3 concurrent running jobs
+- Stop, retry, delete, and report-open actions
+- HTML report links for completed jobs
+
+Browser refresh or tab close does not stop jobs. If the Flask service restarts, queued jobs stay queued, completed history stays available, and previously running jobs are marked `interrupted` and can be retried.
+
+## Packaging
+
+This project is designed to be published as a pip package. Package resources include:
+
+- Prompt templates
+- Default YAML config
+- Flask templates
+- Flask static assets
+
+Recommended release checks:
+
+```bash
+python -m build
+twine check dist/*
+```
+
+Then verify the built wheel in a clean environment:
+
+```bash
+draftclaw --help
+draftclaw-web --help
+```
+
+## Development
+
+Run tests:
+
+```bash
+pytest
+```
+
+## Project Layout
+
+```text
+src/draftclaw/
+  api.py
+  app.py
+  cli.py
+  parser.py
+  settings.py
+  _core/
+  _history/
+  _io/
+  _llm/
+  _modes/
+  _postprocess/
+  _prompts/
+  _runtime/
+  resources/
+  web/
+tests/
+```

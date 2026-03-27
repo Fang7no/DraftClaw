@@ -52,6 +52,12 @@ class DraftClaw:
         model: str = "gpt-4o-mini",
         text_fast_path: bool = True,
         cache_in_process: bool = True,
+        pdf_parse_mode: str = "fast",
+        paddleocr_api_url: str = "https://paddleocr.aistudio-app.com/api/v2/ocr/jobs",
+        paddleocr_api_key: str = "",
+        paddleocr_api_model: str = "PaddleOCR-VL-1.5",
+        paddleocr_poll_interval_sec: float = 5.0,
+        paddleocr_api_timeout_sec: float = 120.0,
         working_dir: str | Path | None = None,
     ) -> "DraftClaw":
         settings = DraftClawSettings(
@@ -63,6 +69,12 @@ class DraftClaw:
             parser=ParserOptions(
                 text_fast_path=text_fast_path,
                 cache_in_process=cache_in_process,
+                pdf_parse_mode=pdf_parse_mode,
+                paddleocr_api_url=paddleocr_api_url,
+                paddleocr_api_key=paddleocr_api_key,
+                paddleocr_api_model=paddleocr_api_model,
+                paddleocr_poll_interval_sec=paddleocr_poll_interval_sec,
+                paddleocr_api_timeout_sec=paddleocr_api_timeout_sec,
             ),
         )
         return cls(settings=settings, working_dir=working_dir)
@@ -91,7 +103,11 @@ class DraftClaw:
         validated_path = self._validate_input_path(input_path)
         self._validate_review_configuration()
         mode_name = self._normalize_mode(mode)
-        result, run_dir = self._app.review_sync(input_path=str(validated_path), mode=mode_name, run_name=run_name)
+        result, run_dir = self._app.review_sync(
+            input_path=str(validated_path),
+            mode=mode_name,
+            run_name=run_name,
+        )
         return self._build_outcome(result, run_dir)
 
     async def review_async(
@@ -178,13 +194,15 @@ class DraftClaw:
 
     def _validate_review_configuration(self) -> None:
         llm = self.settings.llm
-        if not llm.api_key.strip() or llm.api_key.strip() == "your_api_key":
+        api_key = llm.api_key.strip()
+        if not api_key or api_key in {"your_api_key", "***"}:
             raise DraftClawError("API key is not configured. Pass a real `api_key` before running review.")
-        if not llm.base_url.strip():
+        base_url = llm.base_url.strip()
+        if not base_url:
             raise DraftClawError("BASE_URL cannot be empty.")
-        if llm.base_url.rstrip("/").endswith("/chat/completions"):
+        if base_url.rstrip("/").endswith("/chat/completions"):
             raise DraftClawError("BASE_URL should be the API root, not the full /chat/completions endpoint.")
-        if not llm.base_url.startswith(("http://", "https://")):
+        if not base_url.startswith(("http://", "https://")):
             raise DraftClawError("BASE_URL must start with http:// or https://")
         if not llm.model.strip():
             raise DraftClawError("MODEL cannot be empty.")
@@ -196,7 +214,7 @@ class DraftClaw:
         try:
             return ModeName(str(mode).strip().lower())
         except ValueError as exc:
-            raise DraftClawError("RUN_MODE only supports 'fast' or 'standard'.") from exc
+            raise DraftClawError("RUN_MODE only supports 'fast', 'standard', or 'deep'.") from exc
 
     @staticmethod
     def _resolve_settings(
@@ -235,6 +253,12 @@ def create_client(
     model: str = "gpt-4o-mini",
     text_fast_path: bool = True,
     cache_in_process: bool = True,
+    pdf_parse_mode: str = "fast",
+    paddleocr_api_url: str = "https://paddleocr.aistudio-app.com/api/v2/ocr/jobs",
+    paddleocr_api_key: str = "",
+    paddleocr_api_model: str = "PaddleOCR-VL-1.5",
+    paddleocr_poll_interval_sec: float = 5.0,
+    paddleocr_api_timeout_sec: float = 120.0,
 ) -> DraftClaw:
     if settings is not None or llm is not None or config_path is not None:
         return DraftClaw(settings=settings, llm=llm, config_path=config_path, working_dir=working_dir)
@@ -244,6 +268,12 @@ def create_client(
         model=model,
         text_fast_path=text_fast_path,
         cache_in_process=cache_in_process,
+        pdf_parse_mode=pdf_parse_mode,
+        paddleocr_api_url=paddleocr_api_url,
+        paddleocr_api_key=paddleocr_api_key,
+        paddleocr_api_model=paddleocr_api_model,
+        paddleocr_poll_interval_sec=paddleocr_poll_interval_sec,
+        paddleocr_api_timeout_sec=paddleocr_api_timeout_sec,
         working_dir=working_dir,
     )
 
@@ -262,6 +292,12 @@ def review_document(
     model: str = "gpt-4o-mini",
     text_fast_path: bool = True,
     cache_in_process: bool = True,
+    pdf_parse_mode: str = "fast",
+    paddleocr_api_url: str = "https://paddleocr.aistudio-app.com/api/v2/ocr/jobs",
+    paddleocr_api_key: str = "",
+    paddleocr_api_model: str = "PaddleOCR-VL-1.5",
+    paddleocr_poll_interval_sec: float = 5.0,
+    paddleocr_api_timeout_sec: float = 120.0,
 ) -> ReviewOutcome:
     client = create_client(
         settings=settings,
@@ -273,6 +309,12 @@ def review_document(
         model=model,
         text_fast_path=text_fast_path,
         cache_in_process=cache_in_process,
+        pdf_parse_mode=pdf_parse_mode,
+        paddleocr_api_url=paddleocr_api_url,
+        paddleocr_api_key=paddleocr_api_key,
+        paddleocr_api_model=paddleocr_api_model,
+        paddleocr_poll_interval_sec=paddleocr_poll_interval_sec,
+        paddleocr_api_timeout_sec=paddleocr_api_timeout_sec,
     )
     return client.review(input_path, mode=mode, run_name=run_name)
 
@@ -292,6 +334,12 @@ def run_document(
     model: str = "gpt-4o-mini",
     text_fast_path: bool = True,
     cache_in_process: bool = True,
+    pdf_parse_mode: str = "fast",
+    paddleocr_api_url: str = "https://paddleocr.aistudio-app.com/api/v2/ocr/jobs",
+    paddleocr_api_key: str = "",
+    paddleocr_api_model: str = "PaddleOCR-VL-1.5",
+    paddleocr_poll_interval_sec: float = 5.0,
+    paddleocr_api_timeout_sec: float = 120.0,
 ) -> DocumentRun:
     client = create_client(
         settings=settings,
@@ -303,5 +351,11 @@ def run_document(
         model=model,
         text_fast_path=text_fast_path,
         cache_in_process=cache_in_process,
+        pdf_parse_mode=pdf_parse_mode,
+        paddleocr_api_url=paddleocr_api_url,
+        paddleocr_api_key=paddleocr_api_key,
+        paddleocr_api_model=paddleocr_api_model,
+        paddleocr_poll_interval_sec=paddleocr_poll_interval_sec,
+        paddleocr_api_timeout_sec=paddleocr_api_timeout_sec,
     )
     return client.run(input_path, review=review, mode=mode, run_name=run_name)

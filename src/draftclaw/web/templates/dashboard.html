@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DraftClaw &#x5B66;&#x672F;&#x5BA1;&#x9605;&#x5DE5;&#x4F5C;&#x53F0;</title>
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+  <main class="dashboard-shell">
+    <header class="masthead">
+      <div class="masthead-copy">
+        <p class="eyebrow">&#x672C;&#x5730;&#x4F18;&#x5148;&#x5B66;&#x672F;&#x5BA1;&#x9605;</p>
+        <h1>DraftClaw &#x5B66;&#x672F;&#x5BA1;&#x9605;&#x5DE5;&#x4F5C;&#x53F0;</h1>
+        <p class="lede">
+          &#x9762;&#x5411;&#x8BBA;&#x6587;&#x4E0E;&#x7814;&#x7A76;&#x6587;&#x6863;&#x7684;&#x672C;&#x5730;&#x5BA1;&#x9605;&#x961F;&#x5217;&#xFF0C;&#x652F;&#x6301;&#x7D2F;&#x52A0;&#x4E0A;&#x4F20;&#x3001;&#x6392;&#x961F;&#x5904;&#x7406;&#x4E0E;&#x62A5;&#x544A;&#x56DE;&#x770B;&#x3002;
+        </p>
+      </div>
+      <div class="masthead-side">
+        <button id="open-settings" class="icon-button" type="button" aria-label="&#x6253;&#x5F00;&#x914D;&#x7F6E;">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M19.14 12.94a7.99 7.99 0 0 0 .05-.94 7.99 7.99 0 0 0-.05-.94l2.03-1.58a.5.5 0 0 0 .12-.64l-1.92-3.32a.5.5 0 0 0-.6-.22l-2.39.96a7.4 7.4 0 0 0-1.63-.94l-.36-2.54a.49.49 0 0 0-.49-.42h-3.84a.49.49 0 0 0-.49.42l-.36 2.54c-.58.22-1.13.53-1.63.94l-2.39-.96a.5.5 0 0 0-.6.22L2.71 8.84a.5.5 0 0 0 .12.64l2.03 1.58a7.99 7.99 0 0 0-.05.94c0 .32.02.63.05.94l-2.03 1.58a.5.5 0 0 0-.12.64l1.92 3.32a.5.5 0 0 0 .6.22l2.39-.96c.5.41 1.05.72 1.63.94l.36 2.54a.49.49 0 0 0 .49.42h3.84a.49.49 0 0 0 .49-.42l.36-2.54c.58-.22 1.13-.53 1.63-.94l2.39.96a.5.5 0 0 0 .6-.22l1.92-3.32a.5.5 0 0 0-.12-.64l-2.03-1.58ZM12 15.5A3.5 3.5 0 1 1 12 8.5a3.5 3.5 0 0 1 0 7Z"/>
+          </svg>
+          <span>&#x914D;&#x7F6E;</span>
+        </button>
+        <div class="summary-strip">
+          <div class="summary-item">
+            <span id="processing-count" class="summary-value">0</span>
+            <span class="summary-label">&#x5904;&#x7406;&#x961F;&#x5217;</span>
+          </div>
+          <div class="summary-divider"></div>
+          <div class="summary-item">
+            <span id="completed-count" class="summary-value">0</span>
+            <span class="summary-label">&#x5B8C;&#x6210;&#x961F;&#x5217;</span>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <section class="panel submit-panel">
+      <div class="panel-head">
+        <div>
+          <p class="eyebrow">&#x63D0;&#x4EA4;&#x6587;&#x6863;</p>
+          <h2>&#x5F85;&#x5904;&#x7406;&#x6587;&#x4EF6;</h2>
+        </div>
+        <div class="head-note">&#x65B0;&#x6DFB;&#x52A0;&#x6587;&#x4EF6;&#x4F1A;&#x7D2F;&#x52A0;&#x5230;&#x5F53;&#x524D;&#x6E05;&#x5355;&#x4E2D;&#xFF0C;&#x540C;&#x540D;&#x6587;&#x4EF6;&#x4EE5;&#x540E;&#x4E00;&#x6B21;&#x6DFB;&#x52A0;&#x4E3A;&#x51C6;&#x3002;</div>
+      </div>
+
+      <div class="submit-layout">
+        <section class="drop-zone" id="drop-zone">
+          <input id="file-input" class="file-input" type="file" multiple accept=".pdf,.docx,.txt,.md,.html,.htm,.pptx,.adoc,.asciidoc">
+          <p class="drop-kicker">&#x7EE7;&#x7EED;&#x6DFB;&#x52A0;&#x6587;&#x4EF6;</p>
+          <h3 class="drop-title">&#x62D6;&#x62FD;&#x5230;&#x6B64;&#x5904;&#xFF0C;&#x6216;&#x70B9;&#x51FB;&#x9009;&#x62E9;&#x6587;&#x6863;</h3>
+          <p class="drop-copy">
+            &#x652F;&#x6301;&#x20;PDF&#x3001;DOCX&#x3001;TXT&#x3001;MD&#x3001;HTML&#x3001;PPTX&#x3001;AsciiDoc&#x3002;&#x82E5;&#x68C0;&#x6D4B;&#x5230;&#x540C;&#x540D;&#x20;PDF&#x20;&#x5185;&#x5BB9;&#x53D8;&#x5316;&#xFF0C;&#x63D0;&#x4EA4;&#x65F6;&#x4F1A;&#x63D0;&#x9192;&#x662F;&#x5426;&#x91CD;&#x65B0;&#x89E3;&#x6790;&#xFF0C;&#x907F;&#x514D;&#x6CBF;&#x7528;&#x65E7;&#x7F13;&#x5B58;&#x3002;
+          </p>
+        </section>
+
+        <section class="selection-panel">
+          <div class="selection-head">
+            <div>
+              <p class="eyebrow">&#x672C;&#x6B21;&#x6E05;&#x5355;</p>
+              <h2>&#x4E0A;&#x4F20;&#x7BEE;</h2>
+            </div>
+            <button id="clear-files" class="action tertiary" type="button" disabled>&#x6E05;&#x7A7A;</button>
+          </div>
+          <div id="selected-files" class="selected-files empty">
+            &#x5C1A;&#x672A;&#x9009;&#x62E9;&#x6587;&#x4EF6;&#x3002;&#x4F60;&#x53EF;&#x4EE5;&#x591A;&#x6B21;&#x6DFB;&#x52A0;&#xFF0C;&#x7CFB;&#x7EDF;&#x4F1A;&#x7D2F;&#x8BA1;&#x5230;&#x540C;&#x4E00;&#x6279;&#x6B21;&#x4E2D;&#x3002;
+          </div>
+          <div id="settings-hint" class="inline-hint warning" hidden></div>
+          <div class="submit-controls">
+            <label class="field compact">
+              <span>&#x5BA1;&#x9605;&#x6A21;&#x5F0F;</span>
+              <select id="mode">
+                <option value="fast">&#x5FEB;&#x901F;</option>
+                <option value="standard" selected>&#x6807;&#x51C6;</option>
+                <option value="deep">&#x6DF1;&#x5EA6;</option>
+              </select>
+            </label>
+            <label class="field compact">
+              <span>PDF &#x89E3;&#x6790;&#x6A21;&#x5F0F;</span>
+              <select id="pdf-parse-mode">
+                <option value="fast">&#x5FEB;&#x901F;&#xFF08;&#x672C;&#x5730; pypdf&#xFF09;</option>
+                <option value="accurate">&#x7CBE;&#x51C6;&#xFF08;PaddleOCR API&#xFF09;</option>
+              </select>
+            </label>
+            <button id="submit-files" class="action primary" type="button" disabled>&#x63D0;&#x4EA4;&#x5230;&#x5904;&#x7406;&#x961F;&#x5217;</button>
+          </div>
+        </section>
+      </div>
+    </section>
+
+    <section class="queue-grid">
+      <section class="panel queue-panel">
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow">&#x8FDB;&#x884C;&#x4E2D;</p>
+            <h2>&#x5904;&#x7406;&#x961F;&#x5217;</h2>
+          </div>
+          <span id="processing-badge" class="queue-badge">0 &#x9879;</span>
+        </div>
+        <div id="processing-jobs" class="job-list">
+          <div class="empty-state">&#x5F53;&#x524D;&#x6CA1;&#x6709;&#x6B63;&#x5728;&#x5904;&#x7406;&#x6216;&#x7B49;&#x5F85;&#x5F00;&#x59CB;&#x7684;&#x4EFB;&#x52A1;&#x3002;</div>
+        </div>
+        <div class="queue-pagination">
+          <button id="processing-prev" class="action tertiary" type="button">&#x4E0A;&#x4E00;&#x9875;</button>
+          <span id="processing-page" class="page-indicator">0 / 0</span>
+          <button id="processing-next" class="action tertiary" type="button">&#x4E0B;&#x4E00;&#x9875;</button>
+        </div>
+      </section>
+
+      <section class="panel queue-panel">
+        <div class="panel-head">
+          <div>
+            <p class="eyebrow">&#x5DF2;&#x5F52;&#x6863;</p>
+            <h2>&#x5B8C;&#x6210;&#x961F;&#x5217;</h2>
+          </div>
+          <span id="completed-badge" class="queue-badge">0 &#x9879;</span>
+        </div>
+        <div id="completed-jobs" class="job-list">
+          <div class="empty-state">&#x5DF2;&#x5B8C;&#x6210;&#x3001;&#x5DF2;&#x505C;&#x6B62;&#x6216;&#x4E2D;&#x65AD;&#x7684;&#x4EFB;&#x52A1;&#x4F1A;&#x663E;&#x793A;&#x5728;&#x8FD9;&#x91CC;&#x3002;</div>
+        </div>
+        <div class="queue-pagination">
+          <button id="completed-prev" class="action tertiary" type="button">&#x4E0A;&#x4E00;&#x9875;</button>
+          <span id="completed-page" class="page-indicator">0 / 0</span>
+          <button id="completed-next" class="action tertiary" type="button">&#x4E0B;&#x4E00;&#x9875;</button>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <div id="settings-modal" class="modal-shell hidden" aria-hidden="true">
+    <div class="modal-backdrop" data-close-modal="true"></div>
+    <section class="modal-card" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+      <div class="modal-head">
+        <div>
+          <p class="eyebrow">&#x53C2;&#x6570;&#x914D;&#x7F6E;</p>
+          <h2 id="settings-title">&#x6A21;&#x578B;&#x4E0E;&#x8FD0;&#x884C;&#x4FE1;&#x606F;</h2>
+        </div>
+        <button id="close-settings" class="icon-button subtle" type="button" aria-label="&#x5173;&#x95ED;&#x914D;&#x7F6E;">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M18.3 5.71 12 12l6.3 6.29-1.41 1.41L10.59 13.4 4.29 19.7 2.88 18.29 9.17 12 2.88 5.71 4.29 4.3l6.3 6.3 6.3-6.3z"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="modal-fields">
+        <label class="field">
+          <span>API &#x5BC6;&#x94A5;</span>
+          <input id="api-key" type="password" placeholder="sk-...">
+        </label>
+        <label class="field">
+          <span>&#x63A5;&#x53E3;&#x5730;&#x5740;</span>
+          <input id="base-url" type="url" placeholder="https://api.openai.com/v1">
+        </label>
+        <label class="field">
+          <span>&#x6A21;&#x578B;</span>
+          <input id="model" type="text" placeholder="gpt-4o-mini">
+        </label>
+        <label class="field">
+          <span>&#x8FD0;&#x884C;&#x540D;&#x79F0;</span>
+          <input id="run-name" type="text" placeholder="demo_review">
+        </label>
+        <label class="field">
+          <span>PaddleOCR API &#x5730;&#x5740;</span>
+          <input id="paddleocr-api-url" type="url" placeholder="https://paddleocr.aistudio-app.com/api/v2/ocr/jobs">
+        </label>
+        <label class="field">
+          <span>PaddleOCR Token</span>
+          <input id="paddleocr-api-key" type="password" placeholder="d476...">
+        </label>
+        <label class="field">
+          <span>PaddleOCR &#x6A21;&#x578B;</span>
+          <input id="paddleocr-api-model" type="text" placeholder="PaddleOCR-VL-1.5">
+        </label>
+        <p class="field-help">
+          &#x975E; PDF &#x6587;&#x4EF6;&#xFF08;DOCX&#x3001;TXT&#x3001;MD&#x3001;HTML&#x3001;PPTX&#x3001;AsciiDoc&#x7B49;&#xFF09;&#x59CB;&#x7EC8;&#x4F7F;&#x7528;&#x672C;&#x5730;&#x89E3;&#x6790;&#xFF0C;&#x4E0D;&#x4F1A;&#x8C03;&#x7528; OCR&#x3002;PaddleOCR Token / &#x5730;&#x5740; / &#x6A21;&#x578B;&#x53EF;&#x4EE5;&#x63D0;&#x524D;&#x586B;&#x5199;&#x4FDD;&#x5B58;&#xFF0C;&#x53EA;&#x5728; PDF &#x9009;&#x62E9;&#x201C;&#x7CBE;&#x51C6;&#x89E3;&#x6790;&#x201D;&#x65F6;&#x624D;&#x4F1A;&#x88AB;&#x4F7F;&#x7528;&#x3002;
+        </p>
+      </div>
+
+      <p class="modal-note">
+        &#x914D;&#x7F6E;&#x4F1A;&#x4FDD;&#x5B58;&#x5728;&#x672C;&#x5730;&#x5DE5;&#x4F5C;&#x76EE;&#x5F55;&#x4E2D;&#xFF0C;&#x540E;&#x7EED;&#x63D0;&#x4EA4;&#x4EFB;&#x52A1;&#x65F6;&#x76F4;&#x63A5;&#x590D;&#x7528;&#x3002;PDF &#x7CBE;&#x51C6;&#x6A21;&#x5F0F;&#x4F1A;&#x6309; PaddleOCR &#x5B98;&#x65B9; jobs API &#x6D41;&#x7A0B;&#x63D0;&#x4EA4;&#x4F5C;&#x4E1A;&#x3001;&#x8F6E;&#x8BE2;&#x7ED3;&#x679C;&#x3001;&#x518D;&#x4ECE; `jsonUrl` &#x62C9;&#x53D6;&#x89E3;&#x6790;&#x5185;&#x5BB9;&#x3002;
+      </p>
+
+      <div class="modal-actions">
+        <button id="cancel-settings" class="action tertiary" type="button">&#x53D6;&#x6D88;</button>
+        <button id="save-settings" class="action primary" type="button">&#x4FDD;&#x5B58;&#x914D;&#x7F6E;</button>
+      </div>
+    </section>
+  </div>
+
+  <div id="notification" class="notification" role="status" aria-live="polite"></div>
+  <div class="terminal-pagination" aria-hidden="true"></div>
+
+  <script src="/static/app.js" defer></script>
+</body>
+</html>

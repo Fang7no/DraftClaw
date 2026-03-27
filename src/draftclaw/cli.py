@@ -3,10 +3,13 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import sys
+from pathlib import Path
 
-from draftclaw.app import DraftClawApp
 from draftclaw._core.enums import ModeName
 from draftclaw._core.exceptions import DraftClawError
+from draftclaw._runtime.pdf_versions import PdfVersionRegistry
+from draftclaw.app import DraftClawApp
 
 
 class CLIConfigurationError(ValueError):
@@ -25,8 +28,14 @@ def _build_parser() -> argparse.ArgumentParser:
 
     review = sub.add_parser("review", help="Run academic document review")
     review.add_argument("--input", help="Override the input file path from config")
-    review.add_argument("--mode", choices=["fast", "standard"], help="Override the review mode from config")
+    review.add_argument("--mode", choices=["fast", "standard", "deep"], help="Override the review mode from config")
     review.add_argument("--run-name", required=False, help="Optional run name")
+    review.add_argument(
+        "--reparse-pdf",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help="When the same PDF filename is detected with different content, continue and reparse it.",
+    )
 
     validate = sub.add_parser("validate", help="Validate a mode_result JSON")
     validate.add_argument("--result", required=True)
@@ -74,6 +83,7 @@ async def _run_async(args: argparse.Namespace) -> int:
         input_path = args.input or app.config.run.input_file
         if not str(input_path).strip():
             raise CLIConfigurationError("Review input is not configured. Set run.input_file in default.yaml or pass --input.")
+        resolved_input = Path(input_path).expanduser().resolve()
 
         configured_mode = args.mode or app.config.run.mode
         if configured_mode is None:
@@ -81,10 +91,14 @@ async def _run_async(args: argparse.Namespace) -> int:
         try:
             mode = configured_mode if isinstance(configured_mode, ModeName) else ModeName(str(configured_mode).strip().lower())
         except ValueError as exc:
-            raise CLIConfigurationError("Review mode must be either 'fast' or 'standard'.") from exc
+            raise CLIConfigurationError("Review mode must be one of 'fast', 'standard', or 'deep'.") from exc
 
         run_name = args.run_name if args.run_name is not None else app.config.run.run_name
-        result, run_root = await app.review(input_path=str(input_path), mode=mode, run_name=run_name)
+        if not _confirm_pdf_reparse_if_needed(args=args, app=app, input_path=resolved_input):
+            return 1
+
+        result, run_root = await app.review(input_path=str(resolved_input), mode=mode, run_name=run_name)
+        _record_pdf_version(app=app, input_path=resolved_input)
         print(
             json.dumps(
                 {
@@ -102,6 +116,43 @@ async def _run_async(args: argparse.Namespace) -> int:
         return 0
 
     return 1
+
+
+def _confirm_pdf_reparse_if_needed(*, args: argparse.Namespace, app: DraftClawApp, input_path: Path) -> bool:
+    if input_path.suffix.lower() != ".pdf":
+        return True
+
+    registry = PdfVersionRegistry(app.working_dir)
+    status = registry.inspect(input_path)
+    if not status.changed:
+        return True
+
+    previous_seen = f" Last parsed: {status.previous_seen_at}." if status.previous_seen_at else ""
+    message = (
+        f'Same PDF filename detected with different content: "{status.filename}".'
+        f" This usually means the file version changed, and reparsing is recommended.{previous_seen}"
+    )
+    if args.reparse_pdf is True:
+        print(message)
+        return True
+    if args.reparse_pdf is False:
+        print(message)
+        print("Review cancelled.")
+        return False
+    if not sys.stdin.isatty():
+        raise CLIConfigurationError(f"{message} Non-interactive mode requires --reparse-pdf or --no-reparse-pdf.")
+
+    answer = input(f"{message} Continue and reparse the PDF? [Y/n]: ").strip().lower()
+    if answer in {"", "y", "yes"}:
+        return True
+    print("Review cancelled.")
+    return False
+
+
+def _record_pdf_version(*, app: DraftClawApp, input_path: Path) -> None:
+    if input_path.suffix.lower() != ".pdf":
+        return
+    PdfVersionRegistry(app.working_dir).record(input_path)
 
 
 def main() -> None:

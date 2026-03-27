@@ -7,6 +7,7 @@ from pathlib import Path
 from draftclaw._core.config import AppConfig, load_config, load_default_config
 from draftclaw._core.contracts import DocumentText, ModeResult
 from draftclaw._core.enums import ModeName
+from draftclaw._runtime.progress import ProgressCallback
 from draftclaw._runtime.service import ReviewService
 
 
@@ -17,9 +18,15 @@ class DraftClawApp:
         config: AppConfig | None = None,
         llm_override: dict[str, str] | None = None,
         working_dir: str | Path | None = None,
+        progress_callback: ProgressCallback | None = None,
     ) -> None:
         resolved_config = config.model_copy(deep=True) if config is not None else self._load_config(config_path)
-        self._service = ReviewService(resolved_config, working_dir=working_dir, llm_override=llm_override)
+        self._service = ReviewService(
+            resolved_config,
+            working_dir=working_dir,
+            llm_override=llm_override,
+            progress_callback=progress_callback,
+        )
 
     async def review(
         self,
@@ -60,6 +67,10 @@ class DraftClawApp:
     @property
     def config(self) -> AppConfig:
         return self._service.config.model_copy(deep=True)
+
+    @property
+    def working_dir(self) -> Path:
+        return self._service.working_dir.resolve()
 
     @staticmethod
     def dump_result(result: ModeResult) -> str:

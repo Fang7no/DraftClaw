@@ -12,6 +12,13 @@ from draftclaw._postprocess.dedup import renumber_error_items
 from draftclaw._postprocess.reconcile import reconcile_round
 from draftclaw._prompts.builder import PromptBuilder
 from draftclaw._runtime.paragraph_chunker import ParagraphChunker
+from draftclaw._runtime.progress import (
+    PROGRESS_STAGE_ANALYZING,
+    PROGRESS_STAGE_REPORTING,
+    ProgressCallback,
+    chunk_progress_detail,
+    emit_progress,
+)
 
 
 MAIN_CONTEXT_ERROR_TYPES = frozenset(
@@ -42,11 +49,13 @@ class StandardMode:
         prompt_builder: PromptBuilder,
         llm_runner,
         enable_merge_agent: bool = True,
+        progress_callback: ProgressCallback | None = None,
     ) -> None:
         self.chunker = chunker
         self.prompt_builder = prompt_builder
         self.llm_runner = llm_runner
         self.enable_merge_agent = enable_merge_agent
+        self._progress_callback = progress_callback
 
     async def run(self, *, document: DocumentText, history: HistoryStore) -> ModeResult:
         mode_start = perf_counter()
@@ -54,6 +63,7 @@ class StandardMode:
         chunks, infos = self.chunker.split(document.text)
         history.save_chunks(chunks, infos)
         total_rounds = len(chunks)
+        self._report_agent_progress(current=0, total=total_rounds)
 
         checklist: list[CheckItem] = []
         state_errorlist: list[ErrorItem] = []
@@ -142,11 +152,13 @@ class StandardMode:
             checklist = [] if is_final_round else reconciled.checklist
             state_errorlist = renumber_error_items(reconciled.errorlist)
             history.save_state(round_no, checklist, state_errorlist)
+            self._report_agent_progress(current=round_no, total=total_rounds)
 
         final_errorlist = state_errorlist
         merge_mode = "local_only"
         merge_batches = [*main_error_batches, *low_level_error_batches]
         if merge_batches:
+            self._report_reporting_stage()
             merge_start = perf_counter()
             main_fallback_errors = self._filter_errors_by_type(state_errorlist, MAIN_CONTEXT_ERROR_TYPES)
             local_fallback_errors = self._filter_errors_by_type(state_errorlist, LOCAL_CHUNK_ERROR_TYPES)
@@ -407,3 +419,21 @@ class StandardMode:
         if merge_mode == "llm_fallback_local":
             return " (merge agent failed, local merge used)"
         return ""
+
+    def _report_agent_progress(self, *, current: int, total: int) -> None:
+        emit_progress(
+            self._progress_callback,
+            stage=PROGRESS_STAGE_ANALYZING,
+            label="Agent检测中",
+            detail=chunk_progress_detail(current=current, total=total),
+            current=current,
+            total=total,
+        )
+
+    def _report_reporting_stage(self) -> None:
+        emit_progress(
+            self._progress_callback,
+            stage=PROGRESS_STAGE_REPORTING,
+            label="报告生成中",
+            detail="正在合并结果并生成最终报告",
+        )

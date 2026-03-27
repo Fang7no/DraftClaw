@@ -63,6 +63,17 @@ class ErrorMergeOutput(BaseModel):
     notes: str | None = None
 
 
+class DeepPlanItem(BaseModel):
+    focus_location: str = Field(..., min_length=1)
+    suspected_issue: str = Field(..., min_length=1)
+    evidence_summary: str = Field(..., min_length=1)
+
+
+class DeepPlanOutput(BaseModel):
+    plan: list[DeepPlanItem] = Field(default_factory=list)
+    notes: str | None = None
+
+
 class ErrorGroup(BaseModel):
     error_type: str = Field(..., min_length=1)
     sort_order: int = Field(..., ge=1)

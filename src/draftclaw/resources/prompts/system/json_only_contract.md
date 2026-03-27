@@ -6,18 +6,17 @@ The top-level shape must be:
 {
   "checklist": [
     {
-      "check_location": "string",
+      "check_location": "Substring copied word by word from the original text block",
       "check_explanation": "please check ..."
     }
   ],
   "errorlist": [
     {
       "id": "integer",
-      "error_location": "string",
+      "error_location": "Substring copied word by word from the original text block",
       "error_type": "Language Expression Errors | Knowledge Background Errors | Numerical and Calculation Errors | Methodological Logic Errors | Experimental Operational Defects | Distorted Claims | Falsified Citations | Contextual Misalignment | Inconsistency between Text and Figures",
-      "error_reason": "string",
-      "error_reasoning": "string"
+      "error_reason": "Explain in 2-4 sentences why a reviewer could spot this error solely from the edited PDF.",
+      "error_reasoning": "A concise explanation of the complete logical chain of judgment from textual/graphical evidence to erroneous conclusions."
     }
-  ],
-  "notes": "optional"
+  ]
 }

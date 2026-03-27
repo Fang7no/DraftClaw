@@ -83,3 +83,22 @@ def test_public_client_run_reuses_parsed_document_for_review(monkeypatch) -> Non
     assert outcome.document == document
     assert outcome.review is not None
     assert review_calls == [document]
+
+
+def test_public_client_accepts_deep_mode(monkeypatch) -> None:
+    source = _artifact_dir("client_deep") / "sample.txt"
+    source.write_text("alpha\n\nbeta", encoding="utf-8")
+    run_dir = _artifact_dir("client_deep_out")
+
+    client = DraftClaw(
+        settings=DraftClawSettings(
+            llm=LLMOptions(api_key="test-key", base_url="https://example.com/v1", model="demo-model"),
+            parser=ParserOptions(text_fast_path=True, cache_in_process=True),
+        )
+    )
+
+    monkeypatch.setattr(client._app, "review_sync", lambda **_: (ModeResult(mode=ModeName.DEEP), run_dir))
+
+    outcome = client.review(source, mode="deep", run_name="demo")
+
+    assert outcome.result.mode == ModeName.DEEP

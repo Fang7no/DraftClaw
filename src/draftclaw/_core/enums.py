@@ -38,6 +38,7 @@ class InputType(StrEnum):
 class ModeName(StrEnum):
     FAST = "fast"
     STANDARD = "standard"
+    DEEP = "deep"
 
 
 class ErrorType(StrEnum):

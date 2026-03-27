@@ -3,10 +3,10 @@ from __future__ import annotations
 import os
 from collections.abc import Mapping
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 import yaml
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 
 from draftclaw._resources import package_default_config_file
 from draftclaw._core.enums import ModeName
@@ -41,6 +41,17 @@ class ParserConfig(BaseModel):
     cache_in_process: bool = True
     cache_on_disk: bool = True
     docling_page_chunk_size: int | None = Field(default=8, ge=1)
+    pdf_parse_mode: Literal["fast", "accurate"] = "fast"
+    paddleocr_api_url: str = "https://paddleocr.aistudio-app.com/api/v2/ocr/jobs"
+    paddleocr_api_key: str = ""
+    paddleocr_api_model: str = "PaddleOCR-VL-1.5"
+    paddleocr_poll_interval_sec: float = Field(default=5.0, gt=0)
+    paddleocr_api_timeout_sec: float = Field(default=120.0, gt=0)
+
+    @field_validator("pdf_parse_mode", mode="before")
+    @classmethod
+    def _normalize_pdf_parse_mode(cls, value: object) -> str:
+        return str(value or "fast").strip().lower() or "fast"
 
 
 class StandardConfig(BaseModel):
@@ -67,9 +78,11 @@ class AppConfig(BaseModel):
     standard: StandardConfig = Field(default_factory=StandardConfig)
     logging: LoggingConfig = Field(default_factory=LoggingConfig)
 
-    def snapshot(self) -> dict[str, Any]:
+    def snapshot(self, *, redact_secrets: bool = True) -> dict[str, Any]:
         data = self.model_dump()
-        data["llm"]["api_key"] = "***"
+        if redact_secrets:
+            data["llm"]["api_key"] = "***"
+            data["parser"]["paddleocr_api_key"] = "***"
         return data
 
 

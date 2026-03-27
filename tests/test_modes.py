@@ -10,6 +10,7 @@ from draftclaw._core.contracts import DocumentText
 from draftclaw._core.enums import ErrorType, InputType, ModeName
 from draftclaw._history.store import HistoryStore
 from draftclaw._history.trace import TraceLayout
+from draftclaw._modes.deep import DeepMode
 from draftclaw._modes.fast import FastMode
 from draftclaw._modes.standard import StandardMode
 from draftclaw._prompts.builder import PromptBuilder
@@ -583,3 +584,114 @@ async def test_standard_mode_supports_auto_chunk_count() -> None:
     assert result.mode == ModeName.STANDARD
     assert result.stats.chunk_count == 1
     assert result.stats.llm_calls == 2
+
+
+@pytest.mark.asyncio
+async def test_deep_mode_runs_three_stage_main_agent_and_preserves_standard_outputs() -> None:
+    history = _make_history()
+    mode = DeepMode(
+        chunker=ParagraphChunker(target_chunks=2),
+        prompt_builder=PromptBuilder(_prompts_root()),
+        enable_merge_agent=True,
+        llm_runner=StubRunner(
+            [
+                {
+                    "plan": [
+                        {
+                            "focus_location": "Methods",
+                            "suspected_issue": "sample size is inconsistent with the earlier setup",
+                            "evidence_summary": "The current chunk introduces a different sample size than the earlier setup.",
+                        }
+                    ],
+                },
+                {
+                    "checklist": [
+                        {
+                            "check_location": "Methods",
+                            "check_explanation": "sample size may conflict with the setup",
+                        }
+                    ],
+                    "errorlist": [],
+                },
+                {
+                    "checklist": [
+                        {
+                            "check_location": "Methods",
+                            "check_explanation": "sample size may conflict with the setup",
+                        }
+                    ],
+                    "errorlist": [],
+                },
+                {
+                    "errorlist": [
+                        {
+                            "id": 1,
+                            "error_location": "Eq. (2)",
+                            "error_type": "Numerical and Calculation Errors",
+                            "error_reason": "The arithmetic result written in the equation is incorrect.",
+                            "error_reasoning": "The numbers in Eq. (2) do not add up to the stated result, so this chunk contains a confirmed numerical error.",
+                        }
+                    ],
+                },
+                {
+                    "plan": [
+                        {
+                            "focus_location": "Methods",
+                            "suspected_issue": "confirm the sample-size conflict",
+                            "evidence_summary": "Earlier text states one sample size while the current chunk states another.",
+                        }
+                    ],
+                },
+                {
+                    "checklist": [],
+                    "errorlist": [
+                        {
+                            "id": 2,
+                            "error_location": "Methods",
+                            "error_type": "Contextual Misalignment",
+                            "error_reason": "The sample size is inconsistent with the earlier setup.",
+                            "error_reasoning": "Earlier text defines one sample size for the same experiment, but this chunk reports a different size, so the document is internally inconsistent.",
+                        }
+                    ],
+                },
+                {
+                    "checklist": [],
+                    "errorlist": [
+                        {
+                            "id": 2,
+                            "error_location": "Methods",
+                            "error_type": "Contextual Misalignment",
+                            "error_reason": "The sample size is inconsistent with the earlier setup.",
+                            "error_reasoning": "Earlier text defines one sample size for the same experiment, but this chunk reports a different size, so the document is internally inconsistent.",
+                        }
+                    ],
+                },
+                {
+                    "errorlist": [],
+                },
+                {
+                    "errorlist": [
+                        {
+                            "id": 9,
+                            "error_location": "Methods",
+                            "error_type": "Contextual Misalignment",
+                            "error_reason": "The sample size is inconsistent with the earlier setup.",
+                            "error_reasoning": "The document reports conflicting sample sizes for the same experiment, so the duplicate main-agent findings should collapse into one issue.",
+                        }
+                    ],
+                },
+            ]
+        ),
+    )
+
+    result = await mode.run(document=_make_document("methods paragraph\n\nresults paragraph"), history=history)
+
+    assert result.mode == ModeName.DEEP
+    assert result.checklist == []
+    assert {item.error_location for item in result.errorlist} == {"Eq. (2)", "Methods"}
+    assert result.stats.rounds == 2
+    assert result.stats.llm_calls == 8
+    assert (history.paths.prompts / "deep_plan_1.md").exists()
+    assert (history.paths.prompts / "deep_execute_1.md").exists()
+    assert (history.paths.prompts / "deep_validate_1.md").exists()
+    assert (history.paths.prompts / "deep_low_level_1.md").exists()
