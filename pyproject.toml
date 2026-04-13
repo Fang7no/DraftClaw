@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "draftclaw"
+version = "0.1.0"
+description = "Local academic paper review assistant with PDF parsing and Web UI."
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "requests>=2.28.0",
+    "python-dotenv>=1.0.0",
+    "urllib3>=2.0.0",
+    "Pillow>=10.0.0",
+    "PyMuPDF>=1.23.0",
+    "numpy>=1.24.0",
+    "paddlepaddle>=2.6.0",
+    "paddleocr>=2.8.1",
+    "flask>=2.3.0",
+    "flask-cors>=4.0.0",
+    "sqlalchemy>=2.0.0",
+    "werkzeug>=2.3.0",
+]
+
+[project.scripts]
+draftclaw = "draftclaw.cli:main"
+
+[tool.setuptools.packages.find]
+include = ["draftclaw", "draftclaw.*"]
+
+[tool.setuptools.package-data]
+draftclaw = [
+    "prompts/*.md",
+    "prompts/explore/*.md",
+    "prompts/search/*.md",
+    "web/templates/*.html",
+    "web/static/*",
+]
