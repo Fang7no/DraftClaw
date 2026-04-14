@@ -30,22 +30,24 @@ DraftClaw is a pre-review tool for academic papers and research documents. Befor
 #### [PDF Annotations](./example/Example_draftclaw_annotated.pdf) 
 <small>Note: Please view with WPS or a PDF reader. Edge browser has poor support for annotations.</small>
 
-<img src="./example/example_pdf.png" alt="example-png" width="60%" style="border:1px solid #ddd; padding:3px;">
+<img src="./example/example_pdf.png" alt="example-png" width="80%" style="border:1px solid #ddd; padding:3px;">
 
 #### [HTML Report](./example/Example_draftclaw_report.html)
 
-<img src="./example/example_html.png" alt="example-png" width="70%" style="border:1px solid #ddd; padding:3px;">
+<img src="./example/example_html.png" alt="example-png" width="80%" style="border:1px solid #ddd; padding:3px;">
 
 ### System Page
 
-#### Home
-<img src="./example/Home.png" alt="example-png" width="70%" style="border:1px solid #ddd; padding:3px;">
+<!--#### Home
+<img src="./example/Home.png" alt="example-png" width="80%" style="border:1px solid #ddd; padding:3px;">
 
 #### Settings
-<img src="./example/Setting.png" alt="example-png" width="70%" style="border:1px solid #ddd; padding:3px;">
+<img src="./example/Setting.png" alt="example-png" width="80%" style="border:1px solid #ddd; padding:3px;">
 
 #### Detecction
-<img src="./example/Detection.png" alt="example-png" width="70%" style="border:1px solid #ddd; padding:3px;">
+-->
+
+<img src="./example/Detection.png" alt="example-png" width="80%" style="border:1px solid #ddd; padding:3px;">
 
 
 ## ⚡ Quick Start
