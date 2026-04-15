@@ -15,6 +15,8 @@
 
 ---
 
+**Read in other languages: [中文](./README.zh-CN.md)**
+
 ## 🎯 What Is DraftClaw?
 
 **DraftClaw** is a pre-review tool built for academic writing.  
