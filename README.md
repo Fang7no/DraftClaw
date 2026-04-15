@@ -19,9 +19,9 @@
 
 ## 🎯 What Is DraftClaw?
 
-**DraftClaw** is a pre-review tool built for academic writing.  
-Before you submit a paper, thesis, grant proposal, or any formal research document, DraftClaw helps you identify the issues most likely to be flagged during review.
+**DraftClaw** is a pre-review tool built for academic writing.
 
+Before you submit a paper, thesis, grant proposal, or any formal research document, DraftClaw helps you identify the issues most likely to be flagged during review.
 Instead of waiting for reviewers to discover weaknesses in your draft, DraftClaw helps you catch them earlier, fix them faster, and submit with more confidence.
 
 ---
@@ -42,7 +42,7 @@ Instead of waiting for reviewers to discover weaknesses in your draft, DraftClaw
 
 ---
 
-## 🧠 Core Capabilities
+## 🧠 Audit Dimensions
 
 - **✍️ Writing Quality**  
   Improve readability and expression by detecting language issues such as awkward phrasing, ambiguity, inconsistency, and other problems that weaken clarity and professionalism.
@@ -56,8 +56,17 @@ Instead of waiting for reviewers to discover weaknesses in your draft, DraftClaw
 - **🧪 Research & Experimental Rigor**  
   Detect critical issues in formulas, computations, experimental setup, evaluation design, and cross-section consistency that may affect the reliability of the research.
 
+---
+
+## ✨ Highlights
+
 - **📍 Location-aware reporting**  
   Map detected issues back to exact PDF regions, making revision faster, easier, and more actionable.
+- **📤 Detailed Reports:** Supports interactive HTML reports and annotated PDFs for easy issue tracing and review.
+
+- **⚡ Flexible and Efficient:** Provides three review modes — **Fast**, **Standard**, and **Deep** — to support different needs, from quick self-checks to thorough polishing.
+
+- **🔁 Resume Support:** The review process supports interruption and recovery, so you do not need to worry about unexpected interruptions when handling long documents.
 
 ---
 
