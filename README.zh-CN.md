@@ -15,7 +15,7 @@
 
 ---
 
-**切换语言: [English](./README.md)**
+**[English Page](./README.md)**
 
 ## 什么是 DraftClaw？
 
