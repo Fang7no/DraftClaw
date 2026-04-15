@@ -16,6 +16,7 @@ if str(DRAFTCLAW_ROOT) not in sys.path:
 import prompt_loader  # noqa: E402
 import main as draft_main  # noqa: E402
 import logger as draft_logger  # noqa: E402
+import pdf_screenshot  # noqa: E402
 from bbox_locator import BBoxLocator  # noqa: E402
 from chunker import ChunkSplitter  # noqa: E402
 from agents.plan_agent import PlanAgent  # noqa: E402
@@ -1630,6 +1631,51 @@ class PromptWorkflowTests(unittest.TestCase):
             self.assertIn("ocr_text", screenshots[0])
             self.assertIn(screenshots[0]["ocr_source"], {"paddleocr", "tesseract", "pdf_clip_text", "none"})
             self.assertTrue(Path(screenshots[0]["local_path"]).exists())
+
+    def test_paddle_ocr_engine_retries_without_legacy_show_log_argument(self):
+        calls = []
+
+        class FakePaddleOCR:
+            def __init__(self, **kwargs):
+                calls.append(dict(kwargs))
+                if "show_log" in kwargs:
+                    raise ValueError("Unknown argument: show_log")
+
+        with (
+            patch.object(pdf_screenshot, "PaddleOCR", FakePaddleOCR),
+            patch.object(pdf_screenshot, "_PADDLE_OCR_ENGINE", None),
+            patch.object(pdf_screenshot, "_PADDLE_OCR_ENGINE_INITIALIZED", False),
+        ):
+            engine = pdf_screenshot._get_paddle_ocr_engine()
+
+        self.assertIsInstance(engine, FakePaddleOCR)
+        self.assertEqual(
+            calls,
+            [
+                {"use_angle_cls": False, "lang": "en", "show_log": False},
+                {"use_angle_cls": False, "lang": "en"},
+            ],
+        )
+
+    def test_paddle_ocr_engine_failure_is_treated_as_optional(self):
+        calls = []
+
+        class BrokenPaddleOCR:
+            def __init__(self, **kwargs):
+                calls.append(dict(kwargs))
+                raise RuntimeError("No available model hosting platforms detected.")
+
+        with (
+            patch.object(pdf_screenshot, "PaddleOCR", BrokenPaddleOCR),
+            patch.object(pdf_screenshot, "_PADDLE_OCR_ENGINE", None),
+            patch.object(pdf_screenshot, "_PADDLE_OCR_ENGINE_INITIALIZED", False),
+        ):
+            first = pdf_screenshot._get_paddle_ocr_engine()
+            second = pdf_screenshot._get_paddle_ocr_engine()
+
+        self.assertIsNone(first)
+        self.assertIsNone(second)
+        self.assertEqual(calls, [{"use_angle_cls": False, "lang": "en", "show_log": False}])
 
     def test_config_validation_uses_cached_success_when_config_is_unchanged(self):
         runtime_config = {

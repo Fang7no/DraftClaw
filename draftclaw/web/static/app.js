@@ -1048,6 +1048,18 @@ createApp({
       return String(log?.data?.phase || humanizeStage(log?.stage || "") || formatAgent(log?.agent || "System")).trim();
     }
 
+    function shouldHideVisionValidation() {
+      return safeLower(currentTask.value?.mode || "") === "fast";
+    }
+
+    function isVisionProcessLog(log) {
+      const agent = safeLower(log?.agent || "");
+      const stage = safeLower(log?.stage || "");
+      const phase = safeLower(log?.data?.phase || "");
+      const message = safeLower(log?.message || "");
+      return agent === "visionagent" || /vision/.test(`${agent} ${stage} ${phase} ${message}`);
+    }
+
     function processLogEntries() {
       const logs = asArray(currentTask.value?.logs);
       const resumeBoundaryTime = latestResumeBoundaryTime(logs);
@@ -1055,6 +1067,7 @@ createApp({
         const stage = safeLower(log?.stage || "");
         const stageText = safeLower(`${stage} ${log?.message || ""}`);
         if (isSupersededProcessFailure(log, resumeBoundaryTime)) return false;
+        if (shouldHideVisionValidation() && isVisionProcessLog(log)) return false;
         if (hasFailureMarker(stageText)) return true;
         if (stage.startsWith("progress_")) {
           const phase = safeLower(log?.data?.phase || "");

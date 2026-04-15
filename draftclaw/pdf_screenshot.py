@@ -29,14 +29,56 @@ except ImportError:  # pragma: no cover - optional dependency
 
 
 _PADDLE_OCR_ENGINE = None
+_PADDLE_OCR_ENGINE_INITIALIZED = False
+
+
+def _is_unknown_paddle_argument_error(exc: Exception, argument_name: str) -> bool:
+    message = str(exc or "").strip().lower()
+    argument_name = str(argument_name or "").strip().lower()
+    if not message or not argument_name:
+        return False
+    return (
+        f"unknown argument: {argument_name}" in message
+        or ("unexpected keyword argument" in message and argument_name in message)
+    )
+
+
+def _create_paddle_ocr_engine() -> Any:
+    init_variants = (
+        {"use_angle_cls": False, "lang": "en", "show_log": False},
+        {"use_angle_cls": False, "lang": "en"},
+        {"lang": "en"},
+    )
+    last_error: Exception | None = None
+    for kwargs in init_variants:
+        try:
+            return PaddleOCR(**kwargs)
+        except Exception as exc:  # pragma: no cover - depends on installed PaddleOCR version
+            last_error = exc
+            if _is_unknown_paddle_argument_error(exc, "show_log"):
+                continue
+            if _is_unknown_paddle_argument_error(exc, "use_angle_cls"):
+                continue
+            break
+    if last_error is not None:
+        raise last_error
+    return None
 
 
 def _get_paddle_ocr_engine() -> Any:
     global _PADDLE_OCR_ENGINE
+    global _PADDLE_OCR_ENGINE_INITIALIZED
     if PaddleOCR is None:
         return None
-    if _PADDLE_OCR_ENGINE is None:
-        _PADDLE_OCR_ENGINE = PaddleOCR(use_angle_cls=False, lang="en", show_log=False)
+    if _PADDLE_OCR_ENGINE_INITIALIZED:
+        return _PADDLE_OCR_ENGINE
+    _PADDLE_OCR_ENGINE_INITIALIZED = True
+    try:
+        _PADDLE_OCR_ENGINE = _create_paddle_ocr_engine()
+    except Exception:
+        # OCR is optional for bbox screenshots. If PaddleOCR cannot be initialized
+        # in the current runtime, fall back to tesseract or PDF text extraction.
+        _PADDLE_OCR_ENGINE = None
     return _PADDLE_OCR_ENGINE
 
 

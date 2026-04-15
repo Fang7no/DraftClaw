@@ -18,7 +18,7 @@ Return a JSON object preserving:
 ## Rules
 - Translate only the text fields that require translation; do not add or remove fields.
 - Preserve `id`, formulas, variable names, figure/table numbers, citation numbers, method names, dataset names, and the JSON structure.
-- Keep the semantics of `type` and `severity` unchanged.
+- Keep the `type` and `severity` unchanged.
 - If a field is already in the target language, only make necessary polishing and do not change the original meaning.
 - Do not omit any input item.
 - Return JSON only.
@@ -41,8 +41,8 @@ Return a JSON object preserving:
   "items": [
     {
       "id": 1,
-      "type": "Translated error type",
-      "severity": "Translated severity",
+      "type": " Keep it unchanged",
+      "severity": " Keep it unchanged",
       "description": "Translated issue description",
       "reasoning": "Translated reasoning"
     }
@@ -53,4 +53,5 @@ Return a JSON object preserving:
 ## Field constraints
 - `id`: Must be identical to the input and must not be changed.
 - `items`: The count must match the input exactly; do not omit items or reorder them incorrectly.
-- `type`, `severity`, `description`, and `reasoning`: After translation, they should be natural and accurate and must correspond strictly to the original meaning.
+- Keep the `type` and `severity` unchanged.
+- `description`, and `reasoning`: After translation, they should be natural and accurate and must correspond strictly to the original meaning.
