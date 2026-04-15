@@ -78,7 +78,8 @@ Taking the Thesis of the woman involved in the Wuhan University library incident
 
 #### 📝 [PDF Annotations](./example/Example_draftclaw_annotated.pdf) *(Download to view)*
 
-<small>Note: For the best annotation experience, open the file with WPS or a dedicated PDF reader. Edge has limited annotation support.</small>
+> [!CAUTION]
+> Note: For the best annotation experience, open the file with WPS or a dedicated PDF reader. Edge has limited annotation support.
 
 <img src="./example/example_pdf.png" alt="example-png" width="65%" style="border:1px solid #ddd; padding:3px;">
 
