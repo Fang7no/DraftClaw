@@ -129,6 +129,8 @@ http://127.0.0.1:5000
 
 ## 🔐 Configuration
 
+After the following configuration, you can use [test_paper](./test_paper.pdf) to perform a quick test.
+
 <img src="./example/config.png" alt="config-png" width="100%" style="border:1px solid #ddd; padding:3px;">
 
 ### 1️⃣ Open System Settings
@@ -159,8 +161,6 @@ Used for external knowledge retrieval and fact verification.
 
 The Review Model is the core model of the system. It is responsible for the main paper review and error detection workflow.
 
-#### 🤖 Recommended Options
-
 - **Starter**: `qwen3-235b-a22b-instruct-2507`
 - **Advanced**: `gpt-5.4-2026-03-05`
 
@@ -168,16 +168,12 @@ The Review Model is the core model of the system. It is responsible for the main
 
 In **Standard** and **Deep** modes, the system performs a second-pass verification step. That means you must also configure the Recheck Model.
 
-#### 🔁 Recheck LLM
-
-Used to verify and re-evaluate the initial review results.
+**Recheck LLM**. Used to verify and re-evaluate the initial review results.
 
 - **Starter**: `qwen3.5-plus-2026-02-15`
 - **Advanced**: `Gemini 3.1 Pro`
 
-#### 👁️ Recheck VLM
-
-Used for visual verification of figures, layouts, screenshots, and other visual evidence.
+**Recheck VLM**. Used for visual verification of figures, layouts, screenshots, and other visual evidence.
 
 - **Starter**: `qwen3-vl-plus-2025-12-19`
 - **Advanced**: `Gemini 3 Flash`
@@ -192,9 +188,7 @@ For the best review quality, we recommend the following setup strategy:
 
 You are free to choose models based on your own budget, speed, and availability preferences.
 
----
-
-# Where to Get API Keys
+### Where to Get API Keys
 
 You can obtain API keys for different model families from the following platforms:
 
