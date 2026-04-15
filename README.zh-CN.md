@@ -77,8 +77,9 @@
 以下以“武汉大学图书馆事件”当事女生的学位论文为例。
 
 #### [PDF 批注文件](./example/Example_draftclaw_annotated.pdf)（请下载后查看）
-[!CAUTION]
-说明：为了获得更好的批注显示效果，建议使用 WPS 或专业 PDF 阅读器打开。Edge 对批注的支持较为有限。
+
+> [!CAUTION]
+> 说明：为了获得更好的批注显示效果，建议使用 WPS 或专业 PDF 阅读器打开。Edge 对批注的支持较为有限。
 
 <img src="./example/example_pdf.png" alt="example-png" width="65%" style="border:1px solid #ddd; padding:3px;">
 
