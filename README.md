@@ -26,7 +26,7 @@ Instead of waiting for reviewers to discover weaknesses in your draft, DraftClaw
 
 ## 🚀 Use Cases
 
-- **Pre-submission paper check**  
+- **Paper pre-submissioncheck**  
   Detect issues in structure, argumentation, clarity, and writing before submitting to journals or conferences.
 
 - **Thesis pre-submission review**  
@@ -37,19 +37,6 @@ Instead of waiting for reviewers to discover weaknesses in your draft, DraftClaw
 
 - **Formal research document review**  
   Apply the same workflow to technical reports, white papers, project documents, or other materials requiring rigorous review.
-
----
-
-## ✨ Why It Stands Out
-
-- **Review at the chunk level** for finer-grained issue detection
-- **Multiple review depths** with `fast / standard / deep` modes
-- **Search-aware verification** for fact-sensitive problems
-- **Precise PDF bbox localization** to pinpoint where issues occur
-- **Annotated PDF export** with native PDF comments
-- **Standalone HTML reports** for easy sharing and filtering
-- **Persistent local task history and logs**
-- **Built-in Web UI** for upload, review, browsing, and export
 
 ---
 
@@ -74,9 +61,18 @@ Instead of waiting for reviewers to discover weaknesses in your draft, DraftClaw
 
 ## 🎬 Example
 
-Taking the Thesis of the woman involved in the Wuhan University library incident as an example.
+### ⏱️ Runtime and Token Cost
+
+|  | Document Size | Deep Mode | Standard Mode | Fast Mode |
+|---|---|---|---|---|
+| **Thesis** | 73 pages / 52k tokens | 45 min / 1.2M tokens | 37 min / 0.97M tokens | 30 min / 0.67M tokens |
+| **Paper** | 12 pages / 12k tokens | 12 min / 0.31M tokens | 9 min / 0.23M tokens | 7 min / 0.16M tokens |
+
+All results above were measured under the Advanced option configuration. Actual runtime and token cost may vary depending on the base model you choose.
 
 ### 📌 Detection Results
+
+Taking the Thesis of the woman involved in the Wuhan University library incident as an example.
 
 #### 📝 [PDF Annotations](./example/Example_draftclaw_annotated.pdf) *(Download to view)*
 
@@ -89,16 +85,6 @@ Taking the Thesis of the woman involved in the Wuhan University library incident
 <img src="./example/example_html.png" alt="example-png" width="80%" style="border:1px solid #ddd; padding:3px;">
 
 ### 🖥️ System Page
-
-<!--
-#### 🏠 Home
-<img src="./example/Home.png" alt="home" width="80%" style="border:1px solid #ddd; padding:3px;">
-
-#### ⚙️ Settings
-<img src="./example/Setting.png" alt="setting" width="80%" style="border:1px solid #ddd; padding:3px;">
-
-#### 🔎 Detection
--->
 
 <img src="./example/Detection.png" alt="example-png" width="80%" style="border:1px solid #ddd; padding:3px;">
 
@@ -137,31 +123,80 @@ http://127.0.0.1:5000
 
 ---
 
-## 🔐 Minimum Configuration
+## 🔐 Configuration
 
-```env
-MINERU_API_URL=https://mineru.net/api/v4
-MINERU_API_KEY=your_mineru_api_key
+<img src="./example/config.png" alt="config-png" width="100%" style="border:1px solid #ddd; padding:3px;">
 
-REVIEW_API_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
-REVIEW_API_KEY=your_review_api_key
-REVIEW_MODEL=qwen3-235b-a22b-instruct-2507
-```
+### 1️⃣ Open System Settings
 
-## 🛠️ Optional but Commonly Adjusted Configuration
+After launching the system, click **System Settings** to enter the configuration page.
 
-```env
-RECHECK_LLM_API_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
-RECHECK_LLM_API_KEY=your_recheck_llm_api_key
-RECHECK_LLM_MODEL=qwen3-235b-a22b-instruct-2507
+### 2️⃣ Core Services (**Required**)
 
-RECHECK_VLM_API_URL=https://dashscope.aliyuncs.com/compatible-mode/v1
-RECHECK_VLM_API_KEY=your_recheck_vlm_api_key
-RECHECK_VLM_MODEL=qwen3.5-plus-2026-02-15
+These are the foundational services the system depends on. You must complete this step before anything else.
 
-SEARCH_ENGINE=duckduckgo
-SERPER_API_KEY=
-```
+#### 📄 PDF Parsing
+
+Used for parsing and structuring academic PDF documents.
+
+- Go to [MinerU](https://mineru.net/) and sign up for an **API Key**
+- **Completely free**
+
+#### 🌐 Web Search
+
+Used for external knowledge retrieval and fact verification.
+
+- **Default option**: DuckDuckGo  
+  Works out of the box and is **completely free**
+- **Advanced option**: [Serper](https://serper.dev/)  
+  Sign up to get an **API Key** with a **free tier**
+
+### 3️⃣ Review Model (**Required**)
+
+The Review Model is the core model of the system. It is responsible for the main paper review and error detection workflow.
+
+#### 🤖 Recommended Options
+
+- **Starter**: `qwen3-235b-a22b-instruct-2507`
+- **Advanced**: `gpt-5.4-2026-03-05`
+
+### 4️⃣ Recheck Model (**Required in Standard / Deep Modes**)
+
+In **Standard** and **Deep** modes, the system performs a second-pass verification step. That means you must also configure the Recheck Model.
+
+#### 🔁 Recheck LLM
+
+Used to verify and re-evaluate the initial review results.
+
+- **Starter**: `qwen3.5-plus-2026-02-15`
+- **Advanced**: `Gemini 3.1 Pro`
+
+#### 👁️ Recheck VLM
+
+Used for visual verification of figures, layouts, screenshots, and other visual evidence.
+
+- **Starter**: `qwen3-vl-plus-2025-12-19`
+- **Advanced**: `Gemini 3 Flash`
+
+### 💡 Configuration Tips
+
+For the best review quality, we recommend the following setup strategy:
+
+- **Review Model**: choose the **strongest official model** available on your platform
+- **Recheck LLM**: choose a model from a **different family** than the Review Model to reduce same-model bias
+- **Recheck VLM**: choose the **strongest official vision-language model** available
+
+You are free to choose models based on your own budget, speed, and availability preferences.
+
+---
+
+# Where to Get API Keys
+
+You can obtain API keys for different model families from the following platforms:
+
+- **Qwen models**: apply at [DashScope](https://dashscope.console.aliyun.com/)    **free quota**
+- **GPT models**: apply at [OpenAI](https://platform.openai.com/)    **Paid**
+- **Gemini models**: apply at [Google AI Studio](https://aistudio.google.com/)    **Paid**
 
 ---
 
