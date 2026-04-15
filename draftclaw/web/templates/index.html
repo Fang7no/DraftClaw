@@ -1,0 +1,794 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DraftClaw</title>
+  <link rel="icon" type="image/svg+xml" href="/static/assets/logo.svg">
+  <link rel="stylesheet" href="{{ url_for('static', filename='app.css') }}">
+  <script src="https://unpkg.com/vue@3.4.0/dist/vue.global.prod.js"></script>
+</head>
+<body>
+  <div id="app">
+    {% raw %}
+    <div class="shell">
+      <button v-if="currentView === 'upload'" class="lang-switch" @click="toggleLang">{{ uiLang === 'zh' ? 'EN' : '中文' }}</button>
+
+      <main v-if="currentView === 'upload'" class="upload-page">
+        <div class="upload-shell">
+          <section class="upload-card">
+            <header class="upload-header">
+              <div class="upload-header-main">
+                <h1>DraftClaw</h1>
+                <p>{{ t('uploadDescription') }}</p>
+              </div>
+              <button
+                type="button"
+                class="settings-toggle"
+                :class="{ active: showSettingsPanel }"
+                aria-haspopup="dialog"
+                aria-controls="settings-dialog"
+                @click="openSettingsPanel"
+              >
+                <span class="settings-toggle__icon" aria-hidden="true">&#9881;</span>
+                <span class="settings-toggle__copy">
+                  <strong>{{ t('settingsTitle') }}</strong>
+                  <small>{{ settingsSummary }}</small>
+                </span>
+                <span
+                  class="settings-state"
+                  :class="missingRequirements.length ? 'settings-state--warn' : 'settings-state--ready'"
+                >
+                  {{ settingsPanelStatusLabel }}
+                </span>
+              </button>
+            </header>
+
+            <section class="section-block">
+              <div class="section-head">
+                <h2>{{ t('launchTitle') }}</h2>
+                <label class="field field-compact">
+                  <span>{{ t('reportLanguageLabel') }}</span>
+                  <select v-model="reportLanguage">
+                    <option value="zh">{{ t('langChinese') }}</option>
+                    <option value="en">{{ t('langEnglish') }}</option>
+                  </select>
+                </label>
+              </div>
+
+              <div class="mode-selector">
+                <button
+                  v-for="item in modeCards"
+                  :key="item.key"
+                  type="button"
+                  class="mode-btn"
+                  :class="{ active: mode === item.key }"
+                  @click="mode = item.key"
+                >
+                  <strong>{{ item.label }}</strong>
+                  <span>{{ item.copy }}</span>
+                </button>
+              </div>
+
+              <div
+                class="upload-zone"
+                :class="{ dragover: isDragover, disabled: hasActiveTask }"
+                @click="openFilePicker"
+                @dragover.prevent="onDragOver"
+                @dragleave="onDragLeave"
+                @drop.prevent="handleDrop"
+              >
+                <input ref="fileInputRef" type="file" accept=".pdf" class="hidden-input" @change="handleFileSelect">
+                <div class="upload-zone-icon">PDF</div>
+                <h3>{{ t('dropzoneTitle') }}</h3>
+                <p>{{ t('dropzoneDescription') }}</p>
+                <strong v-if="selectedFile">{{ selectedFile.name }}</strong>
+              </div>
+
+              <div v-if="missingRequirements.length" class="inline-alert inline-alert--warn">
+                <strong>{{ t('missingConfigTitle') }}</strong>
+                <span>{{ missingRequirements.join(' / ') }}</span>
+              </div>
+              <div v-if="hasActiveTask" class="inline-alert inline-alert--info">
+                <strong>{{ t('singleTaskLimitTitle') }}</strong>
+                <span>{{ t('singleTaskLimitBody') }}</span>
+              </div>
+              <div v-if="uploadMessage.text" class="inline-alert" :class="alertClass(uploadMessage.type)">
+                <strong>{{ uploadMessage.title }}</strong>
+                <span>{{ uploadMessage.text }}</span>
+              </div>
+
+              <div class="actions-row">
+                <button class="primary-btn" :disabled="cannotStartReview" @click="startReview">
+                  <span v-if="isUploading">{{ t('uploading') }}</span>
+                  <span v-else>{{ t('startReview') }}</span>
+                </button>
+                <button v-if="lastViewedTaskId" class="ghost-btn" @click="resumeLastTask">{{ t('resumeLastTask') }}</button>
+              </div>
+            </section>
+          </section>
+
+          <section class="task-board">
+            <article class="task-panel">
+              <div class="section-head">
+                <h2>{{ t('activeTasks') }}</h2>
+              </div>
+              <div v-if="tasksLoading" class="empty-state">
+                <div class="spinner"></div>
+                <p>{{ t('loadingTasks') }}</p>
+              </div>
+              <div v-else-if="activeTasks.length === 0" class="empty-state">
+                <p>{{ t('noActiveTasks') }}</p>
+              </div>
+              <div v-else class="task-list">
+                <article v-for="task in pagedActiveTasks" :key="task.id" class="task-card task-card--with-actions">
+                  <button type="button" class="task-card-main" @click="openTask(task.id)">
+                    <div class="task-card-top">
+                      <strong>{{ task.pdf_name || task.id }}</strong>
+                      <span class="status-badge" :class="'status-badge--' + task.status">{{ taskStatusLabel(task.status) }}</span>
+                    </div>
+                    <p>{{ task.mode.toUpperCase() }} / {{ task.progress?.message || t('waiting') }}</p>
+                    <div class="progress-bar">
+                      <span :style="{ width: (task.progress?.percent || 0) + '%' }"></span>
+                    </div>
+                    <small>{{ formatDateTime(task.created_at) }}</small>
+                  </button>
+                  <div class="task-card-actions">
+                    <button type="button" class="ghost-btn task-card-action" @click="openTask(task.id)">
+                      {{ t('openTask') }}
+                    </button>
+                    <button
+                      type="button"
+                      class="danger-btn task-card-action"
+                      :disabled="cancellingTaskId === task.id || task.status === 'cancelling'"
+                      @click="cancelTask(task)"
+                    >
+                      {{ cancellingTaskId === task.id || task.status === 'cancelling' ? t('terminatingTask') : t('terminateTask') }}
+                    </button>
+                  </div>
+                </article>
+                <div v-if="activeTaskPageCount > 1" class="task-pagination">
+                  <button type="button" class="ghost-btn task-page-btn" :disabled="activeTaskPage <= 1" @click="changeTaskPage('active', -1)">&lt;</button>
+                  <span>{{ t('page') }} {{ activeTaskPage }} / {{ activeTaskPageCount }}</span>
+                  <button type="button" class="ghost-btn task-page-btn" :disabled="activeTaskPage >= activeTaskPageCount" @click="changeTaskPage('active', 1)">&gt;</button>
+                </div>
+              </div>
+            </article>
+
+            <article class="task-panel">
+              <div class="section-head">
+                <h2>{{ t('completedTasks') }}</h2>
+              </div>
+              <div v-if="tasksLoading" class="empty-state">
+                <div class="spinner"></div>
+                <p>{{ t('loadingTasks') }}</p>
+              </div>
+              <div v-else-if="completedTasks.length === 0" class="empty-state">
+                <p>{{ t('noCompletedTasks') }}</p>
+              </div>
+              <div v-else class="task-list">
+                <article v-for="task in pagedCompletedTasks" :key="task.id" class="task-card task-card--with-actions">
+                  <button type="button" class="task-card-main" @click="openTask(task.id)">
+                    <div class="task-card-top">
+                      <strong>{{ task.pdf_name || task.id }}</strong>
+                      <span class="status-badge" :class="'status-badge--' + task.status">{{ taskStatusLabel(task.status) }}</span>
+                    </div>
+                    <p>{{ issueCountLabel(task) }}</p>
+                    <small>{{ formatDateTime(task.completed_at || task.created_at) }}</small>
+                  </button>
+                  <div class="task-card-actions">
+                    <button type="button" class="ghost-btn task-card-action" @click="openTask(task.id)">
+                      {{ t('openTask') }}
+                    </button>
+                    <button
+                      v-if="['failed', 'cancelled'].includes(task.status)"
+                      type="button"
+                      class="primary-btn task-card-action"
+                      :disabled="resumingTaskId === task.id"
+                      @click="resumeTask(task)"
+                    >
+                      {{ resumingTaskId === task.id ? localeText('继续检测中...', 'Resuming...') : localeText('继续检测', 'Resume') }}
+                    </button>
+                    <button
+                      type="button"
+                      class="danger-btn task-card-action"
+                      :disabled="deletingTaskId === task.id || resumingTaskId === task.id"
+                      @click="deleteCompletedTask(task)"
+                    >
+                      {{ deletingTaskId === task.id ? t('deletingTask') : t('deleteTask') }}
+                    </button>
+                  </div>
+                </article>
+                <div v-if="completedTaskPageCount > 1" class="task-pagination">
+                  <button type="button" class="ghost-btn task-page-btn" :disabled="completedTaskPage <= 1" @click="changeTaskPage('completed', -1)">&lt;</button>
+                  <span>{{ t('page') }} {{ completedTaskPage }} / {{ completedTaskPageCount }}</span>
+                  <button type="button" class="ghost-btn task-page-btn" :disabled="completedTaskPage >= completedTaskPageCount" @click="changeTaskPage('completed', 1)">&gt;</button>
+                </div>
+              </div>
+            </article>
+          </section>
+        </div>
+      </main>
+
+      <div
+        v-if="currentView === 'upload' && showSettingsPanel"
+        id="settings-dialog"
+        class="settings-modal-backdrop"
+        role="dialog"
+        aria-modal="true"
+        :aria-label="t('settingsTitle')"
+        @click.self="closeSettingsPanel"
+      >
+        <section class="settings-modal">
+          <div class="settings-modal__header">
+            <div>
+              <h2>{{ t('settingsTitle') }}</h2>
+              <p class="settings-modal__copy">{{ settingsSummary }}</p>
+            </div>
+            <button type="button" class="ghost-btn settings-modal__close" @click="closeSettingsPanel">
+              {{ t('closeDialog') }}
+            </button>
+          </div>
+
+          <div class="settings-layout">
+            <section class="settings-card settings-card--wide">
+              <div class="settings-card__head">
+                <div>
+                  <h3>{{ localeText('\u6838\u5fc3\u670d\u52a1', 'Core Services') }}</h3>
+                  <p>{{ localeText('\u914d\u7f6e PDF \u89e3\u6790\u3001\u641c\u7d22\u5f15\u64ce\u548c\u8bf7\u6c42\u8282\u594f\u3002', 'Configure PDF parsing, search engine, and request pacing.') }}</p>
+                </div>
+                <span class="settings-card__badge settings-card__badge--required">{{ localeText('\u5fc5\u586b', 'Required') }}</span>
+              </div>
+              <div class="settings-card__grid settings-card__grid--core">
+                <label class="field">
+                  <span>MinerU API URL</span>
+                  <input v-model.trim="configForm.mineru_api_url" type="text" placeholder="https://mineru.net/api/v4">
+                </label>
+                <label class="field">
+                  <span>MinerU API Key</span>
+                  <input v-model.trim="configForm.mineru_api_key" type="password" placeholder="eyJ...">
+                </label>
+                <label class="field">
+                  <span>LLM Request Interval (s)</span>
+                  <input v-model.trim="configForm.llm_request_min_interval_seconds" type="number" min="0" step="0.5" placeholder="2">
+                </label>
+                <label class="field">
+                  <span>Search Engine</span>
+                  <select v-model="configForm.search_engine">
+                    <option value="duckduckgo">DuckDuckGo</option>
+                    <option value="serper">Serper</option>
+                  </select>
+                </label>
+                <label class="field settings-card__span-2">
+                  <span>Serper API Key</span>
+                  <input
+                    v-model.trim="configForm.serper_api_key"
+                    type="password"
+                    :disabled="configForm.search_engine !== 'serper'"
+                    placeholder="Only required when Search Engine = Serper"
+                  >
+                </label>
+              </div>
+            </section>
+
+            <section class="settings-card settings-card--wide">
+              <div class="settings-card__head">
+                <div>
+                  <h3>{{ localeText('\u5ba1\u9605\u6a21\u578b', 'Review Model') }}</h3>
+                  <p>{{ localeText('\u7528\u4e8e Plan\u3001Explore\u3001Summary\uff0cDeep \u6a21\u5f0f\u4e0b\u7684 Search \u4ee5\u53ca\u62a5\u544a\u7ffb\u8bd1\u4e5f\u4f1a\u76f4\u63a5\u590d\u7528\u8fd9\u4e2a\u6a21\u578b\u3002', 'Used by Plan, Explore, Summary, the Search Agent in Deep mode, and report translation.') }}</p>
+                </div>
+                <span class="settings-card__badge settings-card__badge--required">{{ localeText('\u9ed8\u8ba4', 'Default') }}</span>
+              </div>
+              <div class="settings-card__grid">
+                <label class="field">
+                  <span>API URL</span>
+                  <input v-model.trim="configForm.review_api_url" type="text" placeholder="https://dashscope.aliyuncs.com/compatible-mode/v1 or https://api.openai.com/v1">
+                </label>
+                <label class="field">
+                  <span>API Key</span>
+                  <input v-model.trim="configForm.review_api_key" type="password" placeholder="sk-...">
+                </label>
+                <label class="field settings-card__span-2">
+                  <span>Model Name</span>
+                  <input v-model.trim="configForm.review_model" type="text" placeholder="qwen-plus">
+                </label>
+              </div>
+            </section>
+
+            <!-- <section class="settings-card settings-card--wide">
+              <div class="settings-card__head">
+                <div>
+                  <h3>{{ localeText('\u590d\u6838\u589e\u5f3a', 'Recheck Enhancement') }}</h3>
+                  <p>{{ localeText('\u53ea\u5728 Standard / Deep \u4e0b\u4f1a\u89e6\u53d1\u3002\u4e0d\u914d\u7f6e\u65f6\uff0c\u7cfb\u7edf\u4ecd\u7136\u53ef\u4ee5\u6b63\u5e38\u68c0\u6d4b\uff0c\u53ea\u662f\u8df3\u8fc7\u53ef\u9009\u7684 Recheck \u9636\u6bb5\u3002', 'Triggered only in Standard / Deep. If left blank, review still runs normally and simply skips the optional recheck stage.') }}</p>
+                </div>
+                <span class="settings-card__badge settings-card__badge--accent">{{ localeText('\u53ef\u9009\u589e\u5f3a', 'Optional Boost') }}</span>
+              </div>
+              <div class="settings-card__grid">
+                <label class="field">
+                  <span>{{ localeText('\u8bf4\u660e', 'Behavior') }}</span>
+                  <input
+                    type="text"
+                    :value="localeText('Search Agent 和报告翻译始终复用 Review Model', 'Search Agent and Translation always reuse Review Model')"
+                    readonly
+                  >
+                </label>
+                <label class="field">
+                  <span>{{ localeText('\u89e6\u53d1\u6761\u4ef6', 'Trigger') }}</span>
+                  <input
+                    type="text"
+                    :value="localeText('仅在 Standard / Deep 中生效，且只有配置了 Recheck 模型时才触发', 'Standard / Deep only, and only when a Recheck model is configured')"
+                    readonly
+                  >
+                </label>
+              </div>
+            </section> -->
+
+            <section class="settings-card">
+              <div class="settings-card__head">
+                <div>
+                  <h3>{{ localeText('\u590d\u6838 LLM', 'Recheck LLM') }}</h3>
+                  <p>{{ localeText('\u5bf9\u5e94\u5f53\u524d\u7684 Text Recheck\uff0c\u4e3a\u53ef\u9009\u914d\u7f6e\u3002', 'Optional text recheck model for chunk-level issue revalidation.') }}</p>
+                </div>
+                <span class="settings-card__badge">{{ localeText('\u53ef\u9009', 'Optional') }}</span>
+              </div>
+              <div class="settings-card__grid settings-card__grid--stacked">
+                <label class="field">
+                  <span>API URL</span>
+                  <input v-model.trim="configForm.recheck_llm_api_url" type="text" placeholder="https://dashscope.aliyuncs.com/compatible-mode/v1 or https://api.openai.com/v1">
+                </label>
+                <label class="field">
+                  <span>API Key</span>
+                  <input v-model.trim="configForm.recheck_llm_api_key" type="password" placeholder="Leave blank to disable Recheck LLM">
+                </label>
+                <label class="field">
+                  <span>Model Name</span>
+                  <input v-model.trim="configForm.recheck_llm_model" type="text" placeholder="qwen-plus">
+                </label>
+              </div>
+            </section>
+
+            <section class="settings-card">
+              <div class="settings-card__head">
+                <div>
+                  <h3>{{ localeText('\u590d\u6838 VLM', 'Recheck VLM') }}</h3>
+                  <p>{{ localeText('\u5bf9\u5e94 Vision Agent\uff0c\u5e76\u53ea\u5bf9 Language Expression \u4e0e Formula Computation \u8fdb\u884c\u56fe\u50cf\u590d\u6838\u3002', 'Optional VLM used by the Vision Agent for Language Expression and Formula Computation recheck.') }}</p>
+                </div>
+                <span class="settings-card__badge">{{ localeText('\u53ef\u9009', 'Optional') }}</span>
+              </div>
+              <div class="settings-card__grid settings-card__grid--stacked">
+                <label class="field">
+                  <span>API URL</span>
+                  <input v-model.trim="configForm.recheck_vlm_api_url" type="text" placeholder="https://dashscope.aliyuncs.com/compatible-mode/v1 or https://api.openai.com/v1">
+                </label>
+                <label class="field">
+                  <span>API Key</span>
+                  <input v-model.trim="configForm.recheck_vlm_api_key" type="password" placeholder="Leave blank to disable Recheck VLM">
+                </label>
+                <label class="field">
+                  <span>Model Name</span>
+                  <input v-model.trim="configForm.recheck_vlm_model" type="text" placeholder="qwen-vl-max">
+                </label>
+              </div>
+            </section>
+          </div>
+
+          <div v-if="configMessage.text" class="inline-alert" :class="alertClass(configMessage.type)">
+            <strong>{{ configMessage.title }}</strong>
+            <span>{{ configMessage.text }}</span>
+          </div>
+
+          <div class="settings-modal__actions">
+            <button type="button" class="ghost-btn" @click="closeSettingsPanel">{{ t('closeDialog') }}</button>
+            <button type="button" class="primary-btn" :disabled="isSavingConfig" @click="saveConfig()">
+              <span v-if="isSavingConfig">{{ t('savingSettings') }}</span>
+              <span v-else>{{ t('saveSettings') }}</span>
+            </button>
+          </div>
+        </section>
+      </div>
+
+      <main v-if="currentView === 'review'" class="detection-page">
+        <header class="detection-header">
+          <div class="detection-title">
+            <button class="ghost-btn" @click="goHome">{{ t('backToUpload') }}</button>
+            <div v-if="currentTask">
+              <h2>{{ currentTask.pdf_name || currentTask.id }}</h2>
+              <p>
+                <span>{{ currentTask.mode.toUpperCase() }}</span>
+                <span>{{ taskStatusLabel(currentTask.status) }}</span>
+                <span v-if="currentTask.progress?.phase">{{ progressPhaseLabel }}</span>
+              </p>
+            </div>
+          </div>
+          <div class="detection-actions">
+            <button class="ghost-btn" @click="toggleLang">{{ uiLang === 'zh' ? 'EN' : '中文' }}</button>
+            <button
+              v-if="canCancelCurrentTask"
+              class="danger-btn"
+              :disabled="cancellingTaskId === currentTask?.id || currentTask?.status === 'cancelling'"
+              @click="cancelTask(currentTask)"
+            >
+              {{ cancellingTaskId === currentTask?.id || currentTask?.status === 'cancelling' ? t('terminatingTask') : t('terminateTask') }}
+            </button>
+            <button class="ghost-btn" :disabled="!canExportReport" @click="downloadReport">
+              {{ uiLang === 'zh' ? '导出报告' : 'Export Report' }}
+            </button>
+            <button class="ghost-btn" :disabled="!canExportReport || isDownloadingAnnotatedPdf" @click="downloadAnnotatedPdf">
+              {{ isDownloadingAnnotatedPdf ? t('exportingAnnotatedPdf') : (uiLang === 'zh' ? '导出PDF批注' : 'Export Annotated PDF') }}
+            </button>
+            <button class="ghost-btn" @click="toggleProcessPanel">
+              {{ showProcessPanel ? (uiLang === 'zh' ? '隐藏过程' : 'Hide Process') : (uiLang === 'zh' ? '显示过程' : 'Show Process') }}
+            </button>
+          </div>
+        </header>
+
+        <div class="panels-container" ref="workspaceRef">
+          <section class="panel" :style="paneStyle('left')">
+            <div class="panel-header">
+              <strong>{{ t('pdfTitle') }}</strong>
+              <div class="legend">
+                <span class="legend-chip legend-chip--location">{{ t('locationLegend') }}</span>
+                <span class="legend-chip legend-chip--evidence">{{ t('evidenceLegend') }}</span>
+              </div>
+            </div>
+
+            <div class="panel-content panel-content--pdf">
+              <div class="pdf-toolbar">
+                <button @click="prevPage" :disabled="!pdfReady || currentPageNum <= 1">-</button>
+                <label>
+                  <span>{{ t('page') }}</span>
+                  <input v-model.number="currentPageNum" type="number" min="1" :max="pageCount || 1">
+                </label>
+                <span>/ {{ pageCount || 0 }}</span>
+                <button @click="nextPage" :disabled="!pdfReady || currentPageNum >= pageCount">+</button>
+                <button @click="zoomOut" :disabled="!pdfReady">{{ t('zoomOut') }}</button>
+                <span>{{ Math.round(zoom * 100) }}%</span>
+                <button @click="zoomIn" :disabled="!pdfReady">{{ t('zoomIn') }}</button>
+                <div v-if="selectedIssue" class="pdf-focus-group">
+                  <span class="pdf-focus-label">{{ localeText('聚焦', 'Focus') }}</span>
+                  <button
+                    type="button"
+                    :class="{ active: pdfFocusKind === 'location' }"
+                    :disabled="!focusTargetCount('location', selectedIssue)"
+                    @click="setPdfFocusKind('location')"
+                  >
+                    {{ t('locationLegend') }} {{ focusTargetCount('location', selectedIssue) || '' }}
+                  </button>
+                  <button
+                    type="button"
+                    :class="{ active: pdfFocusKind === 'evidence' }"
+                    :disabled="!focusTargetCount('evidence', selectedIssue)"
+                    @click="setPdfFocusKind('evidence')"
+                  >
+                    {{ t('evidenceLegend') }} {{ focusTargetCount('evidence', selectedIssue) || '' }}
+                  </button>
+                  <button
+                    type="button"
+                    :disabled="!focusTargetPosition(selectedIssue)"
+                    @click="cyclePdfFocus(-1)"
+                  >
+                    {{ localeText('上一个', 'Previous') }}
+                  </button>
+                  <span class="pdf-focus-counter">{{ focusTargetPosition(selectedIssue) || localeText('无定位', 'No bbox') }}</span>
+                  <button
+                    type="button"
+                    :disabled="!focusTargetPosition(selectedIssue)"
+                    @click="cyclePdfFocus(1)"
+                  >
+                    {{ localeText('下一个', 'Next') }}
+                  </button>
+                </div>
+              </div>
+
+              <div class="pdf-toolbar pdf-toolbar--compact">
+                <div class="pdf-mini-group">
+                  <button class="pdf-mini-btn" @click="prevPage" :disabled="!pdfReady || currentPageNum <= 1">-</button>
+                  <span class="pdf-mini-value">{{ currentPageNum }} / {{ pageCount || 0 }}</span>
+                  <button class="pdf-mini-btn" @click="nextPage" :disabled="!pdfReady || currentPageNum >= pageCount">+</button>
+                </div>
+                <div class="pdf-mini-group">
+                  <button class="pdf-mini-btn" @click="zoomOut" :disabled="!pdfReady">-</button>
+                  <span class="pdf-mini-value">{{ Math.round(zoom * 100) }}%</span>
+                  <button class="pdf-mini-btn" @click="zoomIn" :disabled="!pdfReady">+</button>
+                </div>
+                <template v-if="selectedIssue">
+                  <div class="pdf-focus-group" :class="{ active: pdfFocusKind === 'location' }">
+                    <span class="pdf-focus-label">Issue Location</span>
+                    <button
+                      type="button"
+                      class="pdf-mini-btn"
+                      :disabled="!focusTargetCount('location', selectedIssue)"
+                      @click="stepPdfFocus('location', -1)"
+                    >
+                      &lt;
+                    </button>
+                    <span class="pdf-focus-counter">{{ focusTargetPositionByKind('location', selectedIssue) || '-' }}</span>
+                    <button
+                      type="button"
+                      class="pdf-mini-btn"
+                      :disabled="!focusTargetCount('location', selectedIssue)"
+                      @click="stepPdfFocus('location', 1)"
+                    >
+                      &gt;
+                    </button>
+                  </div>
+                  <div class="pdf-focus-group" :class="{ active: pdfFocusKind === 'evidence' }">
+                    <span class="pdf-focus-label">Issue Evidence</span>
+                    <button
+                      type="button"
+                      class="pdf-mini-btn"
+                      :disabled="!focusTargetCount('evidence', selectedIssue)"
+                      @click="stepPdfFocus('evidence', -1)"
+                    >
+                      &lt;
+                    </button>
+                    <span class="pdf-focus-counter">{{ focusTargetPositionByKind('evidence', selectedIssue) || '-' }}</span>
+                    <button
+                      type="button"
+                      class="pdf-mini-btn"
+                      :disabled="!focusTargetCount('evidence', selectedIssue)"
+                      @click="stepPdfFocus('evidence', 1)"
+                    >
+                      &gt;
+                    </button>
+                  </div>
+                </template>
+              </div>
+
+              <div v-if="pdfLoading" class="state-card">
+                <div class="spinner"></div>
+                <p>{{ t('loadingPdf') }}</p>
+              </div>
+              <div v-else-if="pdfError" class="state-card state-card--error">
+                <p>{{ pdfError }}</p>
+              </div>
+              <div v-else-if="!pdfReady" class="state-card">
+                <p>{{ t('pdfWaiting') }}</p>
+              </div>
+              <div v-else ref="pdfScrollRef" class="pdf-scroll" @scroll="handlePdfScroll">
+                <div class="pdf-stack">
+                  <section
+                    v-for="page in pdfPages"
+                    :key="page.pageNumber"
+                    :ref="(el) => setPageShellRef(page.pageNumber, el)"
+                    class="pdf-page"
+                  >
+                    <div class="pdf-page-label">{{ t('page') }} {{ page.pageNumber }}</div>
+                    <div class="pdf-page-shell" :style="pageShellStyle(page)">
+                      <img class="pdf-page-image" :src="page.imageUrl" :alt="`${t('page')} ${page.pageNumber}`">
+                      <button
+                        v-for="box in pageBoxes(page.pageNumber)"
+                        :key="box.id"
+                        type="button"
+                        class="pdf-overlay"
+                        :class="['pdf-overlay--' + box.kind, { 'pdf-overlay--active': box.active }]"
+                        :style="boxStyle(box, page)"
+                        @click.stop
+                      >
+                        <span>{{ box.label }}</span>
+                      </button>
+                    </div>
+                  </section>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <div class="resize-handle" :class="{ active: resizeState.handle === 'left' }" @mousedown="startResize('left', $event)"></div>
+
+          <section class="panel" :style="paneStyle('middle')">
+            <div class="panel-header">
+              <strong>{{ t('issuesTitle') }}</strong>
+              <div class="issue-stats">
+                <span>{{ visibleIssues.length }} {{ t('confirmedIssues') }}</span>
+                <span v-if="rejectedIssueCount">{{ rejectedIssueCount }} {{ t('rejectedIssues') }}</span>
+              </div>
+            </div>
+
+            <div class="panel-content panel-content--issues">
+              <div class="issue-toolbar">
+                <div class="chip-group">
+                  <button class="chip" :class="{ active: selectedType === 'all' }" @click="selectedType = 'all'">
+                    {{ t('allIssues') }}
+                  </button>
+                  <button
+                    v-for="type in issueTypes"
+                    :key="type"
+                    class="chip"
+                    :class="{ active: selectedType === type }"
+                    @click="selectedType = type"
+                  >
+                    {{ type }}
+                  </button>
+                </div>
+              </div>
+
+              <div v-if="!currentTask" class="state-card">
+                <p>{{ t('taskWaiting') }}</p>
+              </div>
+              <div v-else-if="currentTask.status === 'running' && filteredIssues.length === 0" class="state-card">
+                <div class="spinner"></div>
+                <p>{{ t('issuesStreaming') }}</p>
+              </div>
+              <div v-else-if="filteredIssues.length === 0" class="state-card">
+                <p>{{ t('noIssuesFound') }}</p>
+              </div>
+              <div v-else class="issue-list-shell">
+                <div class="issue-list">
+                  <article
+                    v-for="issue in filteredIssues"
+                    :key="issue.client_id"
+                    class="issue-card"
+                    :class="{ active: selectedIssue && selectedIssue.client_id === issue.client_id }"
+                    @click="selectIssue(issue)"
+                  >
+                    <div class="issue-card-top">
+                      <div class="issue-badges">
+                        <span class="type-pill">{{ issue.type || issue.type_key }}</span>
+                        <span class="severity-pill" :class="'severity-pill--' + severityClass(issue)">{{ severityLabel(issue) }}</span>
+                        <span class="decision-pill" :class="'decision-pill--' + decisionClass(issue)">{{ decisionLabel(issue) }}</span>
+                      </div>
+                      <small>{{ t('chunkLabel') }} {{ issue.chunk_id ?? '-' }}</small>
+                    </div>
+                    <div class="issue-block">
+                      <span>{{ t('descriptionLegend') }}</span>
+                      <p>{{ issue.description || t('emptyValue') }}</p>
+                    </div>
+                    <div class="issue-block">
+                      <span>{{ t('reasoningLegend') }}</span>
+                      <p>{{ issueReasoningText(issue) || t('emptyValue') }}</p>
+                    </div>
+                    <div class="issue-block">
+                      <span>{{ t('locationLegend') }}</span>
+                      <p>{{ issueLocationText(issue) || t('emptyValue') }}</p>
+                    </div>
+                    <div class="issue-card-foot">
+                      <span>{{ bboxLabel(issue) }}</span>
+                      <span v-if="issuePage(issue)">{{ t('page') }} {{ issuePage(issue) }}</span>
+                    </div>
+                  </article>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <div
+            v-if="showProcessPanel"
+            class="resize-handle"
+            :class="{ active: resizeState.handle === 'right' }"
+            @mousedown="startResize('right', $event)"
+          ></div>
+
+          <section v-if="showProcessPanel" class="panel panel--process" :style="paneStyle('right')">
+            <div class="panel-header">
+              <strong>{{ t('processTitle') }}</strong>
+              <span v-if="currentTask" class="status-badge" :class="'status-badge--' + currentTask.status">{{ taskStatusLabel(currentTask.status) }}</span>
+            </div>
+
+            <div class="panel-content process-content">
+              <div class="workflow-rail">
+                <div v-for="stage in workflowStages" :key="stage.key" class="workflow-item">
+                  <span class="workflow-mark" :class="'workflow-mark--' + stage.status">
+                    <span v-if="stage.status === 'running'" class="workflow-spinner"></span>
+                    <span v-else-if="stage.status === 'done'">✔</span>
+                    <span v-else>o</span>
+                  </span>
+                  <div class="workflow-copy">
+                    <strong :class="{ done: stage.status === 'done' }">{{ stage.label }}</strong>
+                    <p>{{ stage.description }}</p>
+                  </div>
+                </div>
+              </div>
+
+              <div class="process-terminal">
+                <div v-if="!currentTask" class="state-card terminal-empty">
+                  <p>{{ t('taskWaiting') }}</p>
+                </div>
+                <div v-else-if="processItems.length === 0" class="state-card terminal-empty">
+                  <p>{{ t('noLogsYet') }}</p>
+                </div>
+                <div v-else ref="processScrollRef" class="process-stream-shell">
+                  <div class="process-tree">
+                    <section v-for="item in processItems" :key="item.key" class="process-node" :class="{ 'process-node--failed': item.status === 'failed' }">
+                      <button type="button" class="process-node-toggle" @click="toggleSection(item.key)">
+                        <span class="process-node-branch"></span>
+                        <span class="process-node-state" :class="'process-node-state--' + item.status">
+                          <span v-if="item.status === 'running'" class="process-spinner"></span>
+                          <span v-else-if="item.status === 'done'">✔</span>
+                          <span v-else-if="item.status === 'failed'">×</span>
+                          <span v-else>o</span>
+                        </span>
+                        <div class="process-node-head">
+                          <div class="process-node-title-row">
+                            <strong class="process-node-title" :class="{ done: item.status === 'done', failed: item.status === 'failed' }">{{ item.title }}</strong>
+                          </div>
+                          <div class="process-node-meta">
+                            <time v-if="item.time">{{ item.time }}</time>
+                            <span class="process-node-caret" :class="{ open: isSectionOpen(item.key) }">▾</span>
+                          </div>
+                        </div>
+                      </button>
+
+                      <div v-if="isSectionOpen(item.key)" class="process-node-body">
+                        <p v-if="item.summary" class="process-node-summary" :class="{ failed: item.status === 'failed' }">{{ item.summary }}</p>
+
+                        <div v-if="item.children.length" class="process-children">
+                          <section v-for="child in item.children" :key="child.key" class="process-child" :class="{ 'process-child--failed': child.status === 'failed' }">
+                            <button type="button" class="process-child-toggle" @click="toggleSection(child.key)">
+                              <span class="process-child-branch"></span>
+                              <span class="process-node-state process-node-state--child" :class="'process-node-state--' + child.status">
+                                <span v-if="child.status === 'running'" class="process-spinner"></span>
+                                <span v-else-if="child.status === 'done'">✔</span>
+                                <span v-else-if="child.status === 'failed'">×</span>
+                                <span v-else>o</span>
+                              </span>
+                              <div class="process-node-head">
+                                <div class="process-node-title-row">
+                                  <strong class="process-node-title" :class="{ done: child.status === 'done', failed: child.status === 'failed' }">{{ child.title }}</strong>
+                                </div>
+                                <div class="process-node-meta">
+                                  <time v-if="child.time">{{ child.time }}</time>
+                                  <span class="process-node-caret" :class="{ open: isSectionOpen(child.key) }">▾</span>
+                                </div>
+                              </div>
+                            </button>
+
+                            <div v-if="isSectionOpen(child.key)" class="process-child-body">
+                              <p v-if="child.summary" class="process-node-summary" :class="{ failed: child.status === 'failed' }">{{ child.summary }}</p>
+
+                            </div>
+                          </section>
+                        </div>
+                      </div>
+                    </section>
+                  </div>
+                </div>
+              </div>
+              <form class="process-input-shell" @submit.prevent="sendProcessInstruction">
+                <input
+                  v-model="processInstructionDraft"
+                  type="text"
+                  class="process-input"
+                  :placeholder="t('chatPlaceholder')"
+                />
+                <button type="submit" class="ghost-btn process-input-send" :disabled="!canSendProcessInstruction">
+                  {{ t('chatSend') }}
+                </button>
+              </form>
+              <p class="process-input-hint">{{ t('chatReserved') }}</p>
+            </div>
+          </section>
+        </div>
+      </main>
+
+      <div
+        v-if="downloadDialog.visible"
+        class="download-dialog-backdrop"
+        @click.self="closeDownloadDialog"
+      >
+        <section
+          class="download-dialog"
+          :class="'download-dialog--' + downloadDialog.type"
+          role="dialog"
+          aria-modal="true"
+          :aria-busy="isDownloadingAnnotatedPdf ? 'true' : 'false'"
+        >
+          <div class="download-dialog__media">
+            <div v-if="isDownloadingAnnotatedPdf" class="spinner"></div>
+            <div v-else class="download-dialog__symbol">{{ downloadDialog.type === 'error' ? '!' : 'OK' }}</div>
+          </div>
+          <div class="download-dialog__body">
+            <strong>{{ downloadDialog.title }}</strong>
+            <p>{{ downloadDialog.text }}</p>
+          </div>
+          <button v-if="!isDownloadingAnnotatedPdf" type="button" class="ghost-btn" @click="closeDownloadDialog">
+            {{ t('closeDialog') }}
+          </button>
+        </section>
+      </div>
+    </div>
+    {% endraw %}
+  </div>
+  <script src="{{ url_for('static', filename='app.js') }}"></script>
+</body>
+</html>

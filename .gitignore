@@ -9,6 +9,7 @@ Thumbs.db
 .DS_Store
 draftclaw/runtime/
 draftclaw/.claude/
+.draftclaw-submodule-git/
 __pycache__/
 *.egg-info/
 *.py[cod]

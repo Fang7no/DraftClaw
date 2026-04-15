@@ -94,12 +94,16 @@ Taking the Thesis of the woman involved in the Wuhan University library incident
 
 ### 1️⃣ Install
 
+Assuming `Python 3.10+` is already available, the commands below cover everything from `git clone` to the point right before **Configure**.
+
 ```powershell
+git clone https://github.com/Fang7no/DraftClaw.git
+cd DraftClaw
 python -m venv .venv
 .venv\Scripts\activate
 python -m pip install --upgrade pip
 python -m pip install -e .
-````
+```
 
 ### 2️⃣ Configure
 
