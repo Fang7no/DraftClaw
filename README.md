@@ -15,7 +15,7 @@
 
 ---
 
-**Read in other languages: [中文](./README.zh-CN.md)**
+**[中文主页](./README.zh-CN.md)**
 
 ## 🎯 What Is DraftClaw?
 
