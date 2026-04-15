@@ -292,5 +292,4 @@ draftclaw/runtime/
 
 ## 💡 Vision
 
-DraftClaw aims to become the last quality gate before submission —
-a practical AI reviewer that helps researchers improve clarity, rigor, and confidence before their work reaches real reviewers.
+DraftClaw aims to become the last gate before submission: a practical AI reviewer that helps researchers improve clarity, rigor, and confidence before their work reaches real reviewers.
