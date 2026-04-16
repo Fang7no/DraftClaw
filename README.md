@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="./example/logo.png" alt="example-png" width="20%" style="display: block; margin: 0 auto;">
+</p>
+
 # 🦀 DraftClaw: Catch the Flaws Before the Reviewers Do.
 
 <p align="center">
@@ -60,8 +64,7 @@ Instead of waiting for reviewers to discover weaknesses in your draft, DraftClaw
 
 ## ✨ Highlights
 
-- **📍 Location-aware reporting**  
-  Map detected issues back to exact PDF regions, making revision faster, easier, and more actionable.
+- **📍 Location-aware reporting:** Map detected issues back to exact PDF regions, making revision faster, easier, and more actionable.
 - **📤 Detailed Reports:** Supports interactive HTML reports and annotated PDFs for easy issue tracing and review.
 
 - **⚡ Flexible and Efficient:** Provides three review modes — **Fast**, **Standard**, and **Deep** — to support different needs, from quick self-checks to thorough polishing.
