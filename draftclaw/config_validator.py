@@ -135,7 +135,7 @@ def _validate_chat_model(label: str, api_url: str, api_key: str, model: str) -> 
             {"role": "user", "content": "Reply with OK only."},
         ],
         temperature=0,
-        max_tokens=8,
+        max_tokens=16,
         response_format=None,
         stream=False,
     )
