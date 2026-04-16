@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="./example/logo.png" alt="example-png" width="20%" style="display: block; margin: 0 auto;">
+</p>
+
 # DraftClaw：先于审稿人一步，发现稿件问题。
 
 <p align="center">
@@ -60,8 +64,8 @@
 
 ## ✨ 亮点特性
 
-- **📍 位置感知报告**  
-  可将检测到的问题精确映射回 PDF 中的具体区域，使修改更快速、更直接、更具可操作性。
+- **📍 位置感知报告:** 可将检测到的问题精确映射回 PDF 中的具体区域，使修改更快速、更直接、更具可操作性。
+- 
 - **📤 详尽报告：** 支持生成交互式 HTML 报告和带批注的 PDF，便于问题追溯与复查。
 
 - **⚡ 灵活高效：** 提供三种审查模式：**Fast**、**Standard** 和 **Deep**，可满足从快速自查到深度润色的不同需求。
